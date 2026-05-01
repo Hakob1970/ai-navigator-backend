@@ -224,24 +224,52 @@ app.post("/api/auth/verify-code", async (req, res) => {
 // =========================
 
 app.get("/api/premium/check", async (req, res) => {
+  try {
+    console.log("🔥 PREMIUM CHECK HIT");
 
-  const { userId } = req.query;
+    const { userId } = req.query;
 
-  const result = await pool.query(
-    `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-    [userId]
-  );
+    // 1. защита от пустого userId
+    if (!userId) {
+      console.log("❌ NO USER ID");
+      return res.json({ premium: false });
+    }
 
-  const row = result.rows[0];
-  const now = Date.now();
+    // 2. запрос в БД
+    const result = await pool.query(
+      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+      [userId]
+    );
 
-  if (!row || row.premium_until < now) {
-    return res.json({ premium: false });
+    const row = result.rows[0];
+
+    // 3. если записи нет — не премиум
+    if (!row || !row.premium_until) {
+      return res.json({ premium: false });
+    }
+
+    // 4. нормальная работа с датой (вот это критичный фикс 🔒)
+    const premiumUntil = new Date(row.premium_until).getTime();
+    const now = Date.now();
+
+    if (isNaN(premiumUntil)) {
+      console.log("❌ INVALID DATE:", row.premium_until);
+      return res.json({ premium: false });
+    }
+
+    // 5. проверка
+    if (premiumUntil < now) {
+      return res.json({ premium: false });
+    }
+
+    // 6. всё ок
+    return res.json({ premium: true });
+
+  } catch (err) {
+    console.error("❌ PREMIUM ERROR:", err);
+    return res.status(500).json({ premium: false });
   }
-
-  res.json({ premium: true });
 });
-
 // =========================
 // STRIPE CHECKOUT
 // =========================
