@@ -10,7 +10,10 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors({
-  origin: "https://ai1.sytes.net:4443"
+  origin: [
+    "https://ai-navigator.vercel.app",
+    "http://localhost:5500"
+  ]
 }));
 
 app.use((req, res, next) => {
@@ -258,9 +261,9 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
       },
       quantity: 1
     }],
-    success_url: "https://ai1.sytes.net:4443/?success=true",
-    cancel_url: "https://ai1.sytes.net:4443/#pricing",
-
+ 
+success_url: "https://ai-navigator.vercel.app/?success=true",
+cancel_url: "https://ai-navigator.vercel.app/#pricing",
     // 🔥 userId = email
     metadata: { userId }
   });
