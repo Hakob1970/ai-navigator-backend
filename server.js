@@ -75,7 +75,6 @@ const pool = new Pool({
 // =========================
 
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-
   let event;
 
   try {
@@ -91,6 +90,8 @@ app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
+
+    // 🔥 FIX: email-based userId
     const userId = session.metadata?.userId;
 
     if (!userId) return res.json({ received: true });
@@ -169,7 +170,6 @@ app.post("/api/auth/send-code", async (req, res) => {
 // =========================
 
 app.post("/api/auth/verify-code", async (req, res) => {
-
   const { email, code, sessionId } = req.body;
 
   const result = await pool.query(
@@ -192,7 +192,8 @@ app.post("/api/auth/verify-code", async (req, res) => {
     [email, code, sessionId]
   );
 
-  const userId = "user_" + email;
+  // 🔥 FIX: userId = email (ОДИН СТАНДАРТ)
+  const userId = email;
 
   await pool.query(
     `INSERT INTO users (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
@@ -230,8 +231,8 @@ app.get("/api/premium/check", async (req, res) => {
 // =========================
 
 app.post("/api/stripe/create-checkout-session", async (req, res) => {
-
   const { userId } = req.body;
+
   if (!userId) return res.status(400).json({ error: "No userId" });
 
   const session = await stripe.checkout.sessions.create({
@@ -246,6 +247,8 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
     }],
     success_url: "https://ai1.sytes.net:4443/?success=true",
     cancel_url: "https://ai1.sytes.net:4443/#pricing",
+
+    // 🔥 userId = email
     metadata: { userId }
   });
 
