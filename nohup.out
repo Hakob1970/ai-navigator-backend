@@ -1,0 +1,42 @@
+🔥 SERVER FILE IS EXECUTING
+🔥 SERVER STARTING
+◇ injected env (5) from .env // tip: ⌘ override existing { override: true }
+🚀 Backend running on http://0.0.0.0:3000
+📦 DB CONNECTED
+✅ users ready
+✅ subscriptions ready
+✅ payments ready
+🔥 SERVER FILE IS EXECUTING
+🔥 SERVER STARTING
+◇ injected env (5) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+🚀 Backend running on http://0.0.0.0:3000
+📦 DB CONNECTED
+✅ users ready
+✅ subscriptions ready
+✅ payments ready
+🔥 SERVER FILE IS EXECUTING
+🔥 SERVER STARTING
+◇ injected env (5) from .env // tip: ⌘ override existing { override: true }
+🚀 Backend running on http://0.0.0.0:3000
+📦 DB CONNECTED
+✅ users ready
+✅ subscriptions ready
+✅ payments ready
+🔥🔥🔥 THIS IS ACTIVE SERVER FILE
+🔥 SERVER FILE IS EXECUTING
+🔥 SERVER STARTING
+◇ injected env (5) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+🚀 Backend running on http://0.0.0.0:3000
+📦 DB CONNECTED
+✅ users ready
+✅ subscriptions ready
+✅ payments ready
+🔥🔥🔥 THIS IS ACTIVE SERVER FILE
+🔥 SERVER FILE IS EXECUTING
+🔥 SERVER STARTING
+◇ injected env (3) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+🚀 Backend running on http://0.0.0.0:3000
+📦 DB CONNECTED
+✅ users ready
+✅ subscriptions ready
+✅ payments ready
