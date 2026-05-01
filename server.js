@@ -241,24 +241,22 @@ app.get("/api/premium/check", async (req, res) => {
 
     const row = result.rows[0];
 
-    if (!row || !row.premium_until) {
+    if (!row || row.premium_until == null) {
       return res.json({ premium: false });
     }
 
-    // 🔒 ВАЖНО: работаем как с числом
+    // 🔥 НОРМАЛИЗАЦИЯ (главный фикс)
     const premiumUntil = Number(row.premium_until);
     const now = Date.now();
 
-    if (isNaN(premiumUntil)) {
-      console.log("❌ INVALID NUMBER:", row.premium_until);
+    if (!Number.isFinite(premiumUntil)) {
+      console.log("❌ INVALID PREMIUM VALUE:", row.premium_until);
       return res.json({ premium: false });
     }
 
-    if (premiumUntil < now) {
-      return res.json({ premium: false });
-    }
-
-    return res.json({ premium: true });
+    return res.json({
+      premium: premiumUntil > now
+    });
 
   } catch (err) {
     console.error("❌ PREMIUM ERROR:", err);
