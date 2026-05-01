@@ -73,57 +73,70 @@ const pool = new Pool({
 // =========================
 // STRIPE WEBHOOK
 // =========================
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    let event;
 
-app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      req.headers["stripe-signature"],
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error("❌ Webhook error:", err.message);
-    return res.status(400).send();
-  }
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    // 🔥 FIX: email-based userId
-    const userId = session.metadata?.userId;
-
-    if (!userId) return res.json({ received: true });
-
-    const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
-
-    const exists = await pool.query(
-      `SELECT 1 FROM payments WHERE session_id = $1`,
-      [session.id]
-    );
-
-    if (exists.rowCount === 0) {
-      await pool.query(
-        `INSERT INTO subscriptions (user_id, premium_until)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id)
-         DO UPDATE SET premium_until = EXCLUDED.premium_until`,
-        [userId, premiumUntil]
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        req.headers["stripe-signature"],
+        process.env.STRIPE_WEBHOOK_SECRET
       );
-
-      await pool.query(
-        `INSERT INTO payments (user_id, session_id)
-         VALUES ($1, $2)`,
-        [userId, session.id]
-      );
-
-      console.log("💳 PREMIUM ACTIVATED:", userId);
+    } catch (err) {
+      console.error("❌ Webhook error:", err.message);
+      return res.status(400).send();
     }
-  }
 
-  res.json({ received: true });
-});
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      // 🔥 SAFE USER ID
+      const userId = session.metadata?.userId;
+
+      if (!userId) {
+        console.log("⚠️ Missing userId in Stripe metadata");
+        return res.json({ received: true });
+      }
+
+      const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+      try {
+        // 🔒 защита от повторной записи платежа
+        const exists = await pool.query(
+          `SELECT 1 FROM payments WHERE session_id = $1`,
+          [session.id]
+        );
+
+        if (exists.rowCount === 0) {
+          await pool.query(
+            `INSERT INTO subscriptions (user_id, premium_until)
+             VALUES ($1, $2)
+             ON CONFLICT (user_id)
+             DO UPDATE SET premium_until = EXCLUDED.premium_until`,
+            [userId, premiumUntil]
+          );
+
+          await pool.query(
+            `INSERT INTO payments (user_id, session_id)
+             VALUES ($1, $2)`,
+            [userId, session.id]
+          );
+
+          console.log("💳 PREMIUM ACTIVATED:", userId);
+        } else {
+          console.log("🔁 Duplicate webhook ignored:", session.id);
+        }
+      } catch (dbErr) {
+        console.error("❌ DB error in webhook:", dbErr.message);
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
 
 // =========================
 // JSON middleware
