@@ -229,13 +229,11 @@ app.get("/api/premium/check", async (req, res) => {
 
     const { userId } = req.query;
 
-    // 1. защита от пустого userId
     if (!userId) {
       console.log("❌ NO USER ID");
       return res.json({ premium: false });
     }
 
-    // 2. запрос в БД
     const result = await pool.query(
       `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
       [userId]
@@ -243,26 +241,23 @@ app.get("/api/premium/check", async (req, res) => {
 
     const row = result.rows[0];
 
-    // 3. если записи нет — не премиум
     if (!row || !row.premium_until) {
       return res.json({ premium: false });
     }
 
-    // 4. нормальная работа с датой (вот это критичный фикс 🔒)
-    const premiumUntil = new Date(row.premium_until).getTime();
+    // 🔒 ВАЖНО: работаем как с числом
+    const premiumUntil = Number(row.premium_until);
     const now = Date.now();
 
     if (isNaN(premiumUntil)) {
-      console.log("❌ INVALID DATE:", row.premium_until);
+      console.log("❌ INVALID NUMBER:", row.premium_until);
       return res.json({ premium: false });
     }
 
-    // 5. проверка
     if (premiumUntil < now) {
       return res.json({ premium: false });
     }
 
-    // 6. всё ок
     return res.json({ premium: true });
 
   } catch (err) {
