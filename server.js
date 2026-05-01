@@ -9,13 +9,13 @@ const path = require("path");
 const cors = require("cors");
 
 const app = express();
+
 app.use(cors({
   origin: [
-    "https://ai-navigator.vercel.app",
+    "https://ai-navigator-frontend.vercel.app",
     "http://localhost:5500"
   ]
 }));
-
 app.use((req, res, next) => {
   console.log("🌐 REQUEST:", req.method, req.url);
   next();
@@ -261,9 +261,8 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
       },
       quantity: 1
     }],
- 
-success_url: "https://ai-navigator.vercel.app/?success=true",
-cancel_url: "https://ai-navigator.vercel.app/#pricing",
+success_url: "https://ai-navigator-frontend.vercel.app/?success=true",
+cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
     // 🔥 userId = email
     metadata: { userId }
   });
