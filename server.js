@@ -38,7 +38,7 @@ const pool = new Pool({
 
 (async () => {
   console.log("📦 DB CONNECTING...");
-  
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       user_id TEXT PRIMARY KEY
@@ -70,8 +70,21 @@ const pool = new Pool({
     );
   `);
 
+  // 🔥 ДОБАВЛЯЕМ user_identity ТУДА ЖЕ
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_identity (
+      email TEXT PRIMARY KEY,
+      telegram_id TEXT,
+      created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+    );
+  `);
+
   console.log("✅ DB READY");
 })();
+
+// =========================
+// HELPERS
+// =========================
 
 async function getUserEmailByTelegram(telegramId) {
   const result = await pool.query(
@@ -82,15 +95,6 @@ async function getUserEmailByTelegram(telegramId) {
   return result.rows[0]?.email;
 }
 
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS user_identity (
-    email TEXT PRIMARY KEY,
-    telegram_id TEXT,
-    created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
-  );
-`);
-
-console.log("✅ DB READY");
 // =========================
 // STRIPE WEBHOOK
 // =========================
