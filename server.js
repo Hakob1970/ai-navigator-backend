@@ -468,6 +468,34 @@ app.get("/api/dev/make-premium", async (req, res) => {
   }
 });
 
+app.get("/api/dev/debug-user", async (req, res) => {
+  const telegramId = req.query.telegramId;
+
+  try {
+    const user = await pool.query(
+      `SELECT * FROM user_identity WHERE telegram_id = $1`,
+      [telegramId]
+    );
+
+    const email = user.rows[0]?.email;
+
+    const sub = await pool.query(
+      `SELECT * FROM subscriptions WHERE user_id = $1`,
+      [email]
+    );
+
+    res.json({
+      telegramId,
+      email,
+      subscription: sub.rows[0] || null
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 // =========================
 
 const PORT = process.env.PORT || 3000;
