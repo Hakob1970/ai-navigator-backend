@@ -300,6 +300,29 @@ cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
   res.json({ url: session.url });
 });
 
+app.post("/api/user/link-telegram", async (req, res) => {
+  const { email, telegramId } = req.body;
+
+  if (!email || !telegramId) {
+    return res.status(400).json({ error: "Missing data" });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO user_identity (email, telegram_id)
+       VALUES ($1, $2)
+       ON CONFLICT (email)
+       DO UPDATE SET telegram_id = $2`,
+      [email, telegramId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ link-telegram error:", err);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
 // =========================
 // ADMIN STATS
 // =========================
