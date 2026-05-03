@@ -73,6 +73,15 @@ const pool = new Pool({
   console.log("✅ DB READY");
 })();
 
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS user_identity (
+    email TEXT PRIMARY KEY,
+    telegram_id TEXT,
+    created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+  );
+`);
+
+console.log("✅ DB READY");
 // =========================
 // STRIPE WEBHOOK
 // =========================
