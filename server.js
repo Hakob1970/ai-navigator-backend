@@ -308,6 +308,50 @@ app.get("/api/premium/check", async (req, res) => {
     return res.status(500).json({ premium: false });
   }
 });
+
+// =========================
+// PREMIUM CHECK (TELEGRAM)
+// =========================
+app.get("/api/premium/check-telegram", async (req, res) => {
+  const { telegramId } = req.query;
+
+  if (!telegramId) {
+    return res.json({ premium: false });
+  }
+
+  try {
+    const user = await pool.query(
+      `SELECT email FROM user_identity WHERE telegram_id = $1`,
+      [telegramId]
+    );
+
+    const email = user.rows[0]?.email;
+
+    if (!email) {
+      return res.json({ premium: false });
+    }
+
+    const sub = await pool.query(
+      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+      [email]
+    );
+
+    const row = sub.rows[0];
+
+    if (!row) {
+      return res.json({ premium: false });
+    }
+
+    return res.json({
+      premium: Number(row.premium_until) > Date.now()
+    });
+
+  } catch (err) {
+    console.error("CHECK TELEGRAM PREMIUM ERROR:", err);
+    return res.status(500).json({ premium: false });
+  }
+});
+
 // =========================
 // STRIPE CHECKOUT
 // =========================
