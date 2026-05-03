@@ -39,6 +39,15 @@ const pool = new Pool({
 (async () => {
   console.log("📦 DB CONNECTING...");
 
+async function getUserEmailByTelegram(telegramId) {
+  const result = await pool.query(
+    `SELECT email FROM user_identity WHERE telegram_id = $1`,
+    [telegramId]
+  );
+
+  return result.rows[0]?.email;
+}
+  
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       user_id TEXT PRIMARY KEY
