@@ -428,6 +428,25 @@ app.get("/api/admin/stats", async (req, res) => {
   });
 });
 
+app.get("/api/dev/link-test", async (req, res) => {
+  const { email, telegramId } = req.query;
+
+  try {
+    await pool.query(
+      `INSERT INTO user_identity (email, telegram_id)
+       VALUES ($1, $2)
+       ON CONFLICT (email)
+       DO UPDATE SET telegram_id = EXCLUDED.telegram_id`,
+      [email, telegramId]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 // =========================
 
 const PORT = process.env.PORT || 3000;
