@@ -241,6 +241,29 @@ app.post("/api/auth/verify-code", async (req, res) => {
   res.json({ success: true, userId });
 });
 
+app.post("/api/user/link-telegram", async (req, res) => {
+  const { email, telegramId } = req.body;
+
+  if (!email || !telegramId) {
+    return res.status(400).json({ error: "Missing data" });
+  }
+
+  try {
+    await pool.query(
+      `INSERT INTO user_identity (email, telegram_id)
+       VALUES ($1, $2)
+       ON CONFLICT (email)
+       DO UPDATE SET telegram_id = EXCLUDED.telegram_id`,
+      [email, telegramId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("LINK TELEGRAM ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // =========================
 // PREMIUM CHECK
 // =========================
