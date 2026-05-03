@@ -447,6 +447,27 @@ app.get("/api/dev/link-test", async (req, res) => {
   }
 });
 
+app.get("/api/dev/make-premium", async (req, res) => {
+  const email = "haksmuradyan0@gmail.com";
+
+  const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+  try {
+    await pool.query(
+      `INSERT INTO subscriptions (user_id, premium_until)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id)
+       DO UPDATE SET premium_until = EXCLUDED.premium_until`,
+      [email, premiumUntil]
+    );
+
+    res.json({ ok: true, email, premiumUntil });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 // =========================
 
 const PORT = process.env.PORT || 3000;
