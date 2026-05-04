@@ -327,6 +327,8 @@ app.get("/api/premium/check-telegram", async (req, res) => {
 
     const email = user.rows[0]?.email;
 
+console.log("EMAIL FOUND:", email);
+    
     if (!email) {
       return res.json({ premium: false });
     }
