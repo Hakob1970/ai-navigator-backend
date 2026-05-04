@@ -338,6 +338,8 @@ app.get("/api/premium/check-telegram", async (req, res) => {
 
     const row = sub.rows[0];
 
+ console.log("PREMIUM CHECK:", row?.premium_until, Date.now());
+    
     if (!row) {
       return res.json({ premium: false });
     }
