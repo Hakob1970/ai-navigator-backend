@@ -398,6 +398,12 @@ app.post("/api/user/link-telegram", async (req, res) => {
       [telegramId]
     );
 
+      // 🔥 2. удалить старую связь email (ВАЖНО)
+    await pool.query(
+      `DELETE FROM user_identity WHERE email = $1`,
+      [email]
+    );
+
     // 🔥 создаём новую
     await pool.query(
       `INSERT INTO user_identity (email, telegram_id)
