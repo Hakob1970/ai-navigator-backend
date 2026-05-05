@@ -253,17 +253,17 @@ app.post("/api/user/link-telegram", async (req, res) => {
       `INSERT INTO user_identity (email, telegram_id)
        VALUES ($1, $2)
        ON CONFLICT (email)
-       DO UPDATE SET telegram_id = EXCLUDED.telegram_id`,
+       DO UPDATE SET telegram_id = $2`,
       [email, telegramId]
     );
 
     res.json({ success: true });
+
   } catch (err) {
-    console.error("LINK TELEGRAM ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ link-telegram error:", err);
+    res.status(500).json({ error: "server error" });
   }
 });
-
 // =========================
 // PREMIUM CHECK
 // =========================
