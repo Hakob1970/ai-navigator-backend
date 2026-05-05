@@ -392,6 +392,13 @@ app.post("/api/user/link-telegram", async (req, res) => {
   }
 
   try {
+    // 🔥 УДАЛЯЕМ старую привязку этого telegramId
+    await pool.query(
+      `DELETE FROM user_identity WHERE telegram_id = $1`,
+      [telegramId]
+    );
+
+    // 🔥 создаём новую
     await pool.query(
       `INSERT INTO user_identity (email, telegram_id)
        VALUES ($1, $2)
@@ -401,6 +408,7 @@ app.post("/api/user/link-telegram", async (req, res) => {
     );
 
     res.json({ success: true });
+
   } catch (err) {
     console.error("❌ link-telegram error:", err);
     res.status(500).json({ error: "server error" });
