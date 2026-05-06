@@ -386,34 +386,25 @@ cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
   res.json({ url: session.url });
 });
 
-app.post("/api/user/link-telegram", async (req, res) => {
-  const { email, telegramId } = req.body;
 
-  if (!email || !telegramId) {
+app.post("/api/user/link-telegram", async (req, res) => {
+  const { userId, telegramId } = req.body;
+
+  if (!userId || !telegramId) {
     return res.status(400).json({ error: "Missing data" });
   }
 
   try {
-    // 🔥 УДАЛЯЕМ старую привязку этого telegramId
     await pool.query(
-      `DELETE FROM user_identity WHERE telegram_id = $1`,
-      [telegramId]
+      `
+      UPDATE users
+      SET telegram_id = $1
+      WHERE user_id = $2
+      `,
+      [telegramId, userId]
     );
 
-      // 🔥 2. удалить старую связь email (ВАЖНО)
-    await pool.query(
-      `DELETE FROM user_identity WHERE email = $1`,
-      [email]
-    );
-
-    // 🔥 создаём новую
-    await pool.query(
-      `INSERT INTO user_identity (email, telegram_id)
-       VALUES ($1, $2)
-       ON CONFLICT (email)
-       DO UPDATE SET telegram_id = $2`,
-      [email, telegramId]
-    );
+    console.log("🔗 Telegram linked:", userId, telegramId);
 
     res.json({ success: true });
 
