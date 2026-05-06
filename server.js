@@ -288,13 +288,19 @@ app.get("/api/premium/check", async (req, res) => {
       return res.json({ premium: false });
     }
 
+    const userIdNum = Number(userId);
+
+    if (!Number.isFinite(userIdNum)) {
+      return res.json({ premium: false });
+    }
+
     const result = await pool.query(
       `
       SELECT s.premium_until
       FROM subscriptions s
       WHERE s.user_ref = $1
       `,
-      [Number(userId)]
+      [userIdNum]
     );
 
     const row = result.rows[0];
