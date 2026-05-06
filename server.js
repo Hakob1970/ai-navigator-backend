@@ -219,64 +219,61 @@ app.post("/api/auth/send-code", async (req, res) => {
 // =========================
 // VERIFY
 // =========================
-
 app.post("/api/auth/verify-code", async (req, res) => {
   const { email, code, sessionId } = req.body;
 
-  const result = await pool.query(
-    `SELECT * FROM auth_codes
-     WHERE email = $1 AND code = $2 AND session_id = $3 AND used = 0
-     ORDER BY expires_at DESC
-     LIMIT 1`,
-    [email, code, sessionId]
-  );
-
-  const row = result.rows[0];
-
-  if (!row) return res.status(400).json({ error: "Invalid code" });
-  if (row.expires_at < Date.now()) {
-    return res.status(400).json({ error: "Expired" });
-  }
-
-  await pool.query(
-    `UPDATE auth_codes SET used = 1 WHERE email = $1 AND code = $2 AND session_id = $3`,
-    [email, code, sessionId]
-  );
-
-  // 🔥 FIX: userId = email (ОДИН СТАНДАРТ)
-  const userId = email;
-
-  await pool.query(
-    `INSERT INTO users (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
-    [userId]
-  );
-
-  res.json({ success: true, userId });
-});
-
-app.post("/api/user/link-telegram", async (req, res) => {
-  const { email, telegramId } = req.body;
-
-  if (!email || !telegramId) {
-    return res.status(400).json({ error: "Missing data" });
-  }
-
   try {
-    await pool.query(
-      `INSERT INTO user_identity (email, telegram_id)
-       VALUES ($1, $2)
-       ON CONFLICT (email)
-       DO UPDATE SET telegram_id = $2`,
-      [email, telegramId]
+    const result = await pool.query(
+      `SELECT * FROM auth_codes
+       WHERE email = $1 AND code = $2 AND session_id = $3 AND used = 0
+       ORDER BY expires_at DESC
+       LIMIT 1`,
+      [email, code, sessionId]
     );
 
-    res.json({ success: true });
+    const row = result.rows[0];
+
+    if (!row) return res.status(400).json({ error: "Invalid code" });
+    if (row.expires_at < Date.now()) {
+      return res.status(400).json({ error: "Expired" });
+    }
+
+    await pool.query(
+      `UPDATE auth_codes
+       SET used = 1
+       WHERE email = $1 AND code = $2 AND session_id = $3`,
+      [email, code, sessionId]
+    );
+
+    // ✅ НАХОДИМ ИЛИ СОЗДАЁМ пользователя
+    let user = await pool.query(
+      `SELECT user_id FROM users WHERE email = $1`,
+      [email]
+    );
+
+    let userId;
+
+    if (user.rowCount === 0) {
+      const insert = await pool.query(
+        `INSERT INTO users (email)
+         VALUES ($1)
+         RETURNING user_id`,
+        [email]
+      );
+      userId = insert.rows[0].user_id;
+    } else {
+      userId = user.rows[0].user_id;
+    }
+
+    // ✅ ВАЖНО: возвращаем ЧИСЛО
+    res.json({ success: true, userId });
 
   } catch (err) {
-    console.error("❌ link-telegram error:", err);
+    console.error("❌ VERIFY ERROR:", err);
     res.status(500).json({ error: "server error" });
   }
 });
+
 // =========================
 // PREMIUM CHECK
 // =========================
