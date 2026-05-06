@@ -118,18 +118,24 @@ app.post(
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
-      // 🔥 SAFE USER ID
       const userId = session.metadata?.userId;
 
       if (!userId) {
-        console.log("⚠️ Missing userId in Stripe metadata");
+        console.log("⚠️ Missing userId in metadata");
         return res.json({ received: true });
       }
 
-      const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const realUserId = Number(userId);
+
+      if (!Number.isFinite(realUserId)) {
+        console.log("❌ Invalid userId:", userId);
+        return res.json({ received: true });
+      }
+
+      const premiumUntil =
+        Date.now() + 30 * 24 * 60 * 60 * 1000;
 
       try {
-        // 🔒 защита от повторной записи платежа
         const exists = await pool.query(
           `SELECT 1 FROM payments WHERE session_id = $1`,
           [session.id]
@@ -137,41 +143,30 @@ app.post(
 
         if (exists.rowCount === 0) {
 
-  // 🔍 найдём пользователя
-  const userRes = await pool.query(
-    `SELECT user_id FROM users WHERE user_id = $1`,
-    [Number(userId)]
-  );
+          await pool.query(
+            `
+            INSERT INTO subscriptions (user_ref, premium_until)
+            VALUES ($1, $2)
+            ON CONFLICT (user_ref)
+            DO UPDATE SET premium_until = EXCLUDED.premium_until
+            `,
+            [realUserId, premiumUntil]
+          );
 
-  if (userRes.rowCount === 0) {
-    console.log("❌ User not found:", userId);
-    return res.json({ received: true });
-  }
+          await pool.query(
+            `
+            INSERT INTO payments (user_id, session_id)
+            VALUES ($1, $2)
+            `,
+            [realUserId, session.id]
+          );
 
-  const realUserId = userRes.rows[0].user_id;
+          console.log("💳 PREMIUM ACTIVATED:", realUserId);
 
-  // 💳 записываем premium по user_ref
-  await pool.query(
-    `INSERT INTO subscriptions (user_ref, premium_until)
-     VALUES ($1, $2)
-     ON CONFLICT (user_ref)
-     DO UPDATE SET premium_until = EXCLUDED.premium_until`,
-    [realUserId, premiumUntil]
-  );
-
-  // 🧾 сохраняем платеж
-  await pool.query(
-    `INSERT INTO payments (user_id, session_id)
-     VALUES ($1, $2)`,
-    [realUserId, session.id]
-  );
-
-  console.log("💳 PREMIUM ACTIVATED:", realUserId);
-}
-        
-     else {
+        } else {
           console.log("🔁 Duplicate webhook ignored:", session.id);
         }
+
       } catch (dbErr) {
         console.error("❌ DB error in webhook:", dbErr.message);
       }
