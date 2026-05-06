@@ -136,22 +136,40 @@ app.post(
         );
 
         if (exists.rowCount === 0) {
-          await pool.query(
-            `INSERT INTO subscriptions (user_id, premium_until)
-             VALUES ($1, $2)
-             ON CONFLICT (user_id)
-             DO UPDATE SET premium_until = EXCLUDED.premium_until`,
-            [userId, premiumUntil]
-          );
 
-          await pool.query(
-            `INSERT INTO payments (user_id, session_id)
-             VALUES ($1, $2)`,
-            [userId, session.id]
-          );
+  // 🔍 найдём пользователя
+  const userRes = await pool.query(
+    `SELECT user_id FROM users WHERE user_id = $1`,
+    [Number(userId)]
+  );
 
-          console.log("💳 PREMIUM ACTIVATED:", userId);
-        } else {
+  if (userRes.rowCount === 0) {
+    console.log("❌ User not found:", userId);
+    return res.json({ received: true });
+  }
+
+  const realUserId = userRes.rows[0].user_id;
+
+  // 💳 записываем premium по user_ref
+  await pool.query(
+    `INSERT INTO subscriptions (user_ref, premium_until)
+     VALUES ($1, $2)
+     ON CONFLICT (user_ref)
+     DO UPDATE SET premium_until = EXCLUDED.premium_until`,
+    [realUserId, premiumUntil]
+  );
+
+  // 🧾 сохраняем платеж
+  await pool.query(
+    `INSERT INTO payments (user_id, session_id)
+     VALUES ($1, $2)`,
+    [realUserId, session.id]
+  );
+
+  console.log("💳 PREMIUM ACTIVATED:", realUserId);
+}
+        
+     else {
           console.log("🔁 Duplicate webhook ignored:", session.id);
         }
       } catch (dbErr) {
@@ -275,32 +293,28 @@ app.get("/api/premium/check", async (req, res) => {
     const { userId } = req.query;
 
     if (!userId) {
-      console.log("❌ NO USER ID");
       return res.json({ premium: false });
     }
 
     const result = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-      [userId]
+      `
+      SELECT s.premium_until
+      FROM subscriptions s
+      WHERE s.user_ref = $1
+      `,
+      [Number(userId)]
     );
 
     const row = result.rows[0];
 
-    if (!row || row.premium_until == null) {
+    if (!row) {
       return res.json({ premium: false });
     }
 
-    // 🔥 НОРМАЛИЗАЦИЯ (главный фикс)
     const premiumUntil = Number(row.premium_until);
-    const now = Date.now();
-
-    if (!Number.isFinite(premiumUntil)) {
-      console.log("❌ INVALID PREMIUM VALUE:", row.premium_until);
-      return res.json({ premium: false });
-    }
 
     return res.json({
-      premium: premiumUntil > now
+      premium: premiumUntil > Date.now()
     });
 
   } catch (err) {
@@ -309,9 +323,9 @@ app.get("/api/premium/check", async (req, res) => {
   }
 });
 
-// =========================
 // PREMIUM CHECK (TELEGRAM)
 // =========================
+
 app.get("/api/premium/check-telegram", async (req, res) => {
   const { telegramId } = req.query;
 
@@ -320,28 +334,18 @@ app.get("/api/premium/check-telegram", async (req, res) => {
   }
 
   try {
-    const user = await pool.query(
-      `SELECT email FROM user_identity WHERE telegram_id = $1`,
+    const result = await pool.query(
+      `
+      SELECT s.premium_until
+      FROM subscriptions s
+      JOIN users u ON s.user_ref = u.user_id
+      WHERE u.telegram_id = $1
+      `,
       [telegramId]
     );
 
-    const email = user.rows[0]?.email;
+    const row = result.rows[0];
 
-console.log("EMAIL FOUND:", email);
-    
-    if (!email) {
-      return res.json({ premium: false });
-    }
-
-    const sub = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-      [email]
-    );
-
-    const row = sub.rows[0];
-
- console.log("PREMIUM CHECK:", row?.premium_until, Date.now());
-    
     if (!row) {
       return res.json({ premium: false });
     }
@@ -351,7 +355,7 @@ console.log("EMAIL FOUND:", email);
     });
 
   } catch (err) {
-    console.error("CHECK TELEGRAM PREMIUM ERROR:", err);
+    console.error("❌ TELEGRAM PREMIUM ERROR:", err);
     return res.status(500).json({ premium: false });
   }
 });
