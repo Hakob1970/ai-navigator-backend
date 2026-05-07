@@ -116,7 +116,7 @@ app.get("/api/premium/check", async (req, res) => {
       `
       SELECT premium_until
       FROM subscriptions
-      WHERE user_ref = $1
+     WHERE user_id = $1
       `,
       [userId]
     );
