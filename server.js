@@ -370,6 +370,7 @@ app.post(
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
+      // 💥 EMAIL = USER ID (НОРМАЛЬНАЯ МОДЕЛЬ)
       const userId = session.metadata?.userId;
 
       if (!userId) {
@@ -377,15 +378,7 @@ app.post(
         return res.json({ received: true });
       }
 
-      const realUserId = Number(userId);
-
-      if (!Number.isFinite(realUserId)) {
-        console.log("❌ Invalid userId:", userId);
-        return res.json({ received: true });
-      }
-
-      const premiumUntil =
-        Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
 
       try {
         const exists = await pool.query(
@@ -402,7 +395,7 @@ app.post(
             ON CONFLICT (user_ref)
             DO UPDATE SET premium_until = EXCLUDED.premium_until
             `,
-            [realUserId, premiumUntil]
+            [userId, premiumUntil]
           );
 
           await pool.query(
@@ -410,10 +403,10 @@ app.post(
             INSERT INTO payments (user_id, session_id)
             VALUES ($1, $2)
             `,
-            [realUserId, session.id]
+            [userId, session.id]
           );
 
-          console.log("💳 PREMIUM ACTIVATED:", realUserId);
+          console.log("💳 PREMIUM ACTIVATED:", userId);
 
         } else {
           console.log("🔁 Duplicate webhook ignored:", session.id);
