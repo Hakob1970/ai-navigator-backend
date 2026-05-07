@@ -10,6 +10,9 @@ const cors = require("cors");
 
 const app = express();
 
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
 app.use(cors({
   origin: [
     "https://ai-navigator-frontend.vercel.app",
@@ -94,101 +97,6 @@ async function getUserEmailByTelegram(telegramId) {
 
   return result.rows[0]?.email;
 }
-
-// =========================
-// STRIPE WEBHOOK
-// =========================
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        req.headers["stripe-signature"],
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("❌ Webhook error:", err.message);
-      return res.status(400).send();
-    }
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-
-      const userId = session.metadata?.userId;
-
-      if (!userId) {
-        console.log("⚠️ Missing userId in metadata");
-        return res.json({ received: true });
-      }
-
-      const realUserId = Number(userId);
-
-      if (!Number.isFinite(realUserId)) {
-        console.log("❌ Invalid userId:", userId);
-        return res.json({ received: true });
-      }
-
-      const premiumUntil =
-        Date.now() + 30 * 24 * 60 * 60 * 1000;
-
-      try {
-        const exists = await pool.query(
-          `SELECT 1 FROM payments WHERE session_id = $1`,
-          [session.id]
-        );
-
-        if (exists.rowCount === 0) {
-
-          await pool.query(
-            `
-            INSERT INTO subscriptions (user_ref, premium_until)
-            VALUES ($1, $2)
-            ON CONFLICT (user_ref)
-            DO UPDATE SET premium_until = EXCLUDED.premium_until
-            `,
-            [realUserId, premiumUntil]
-          );
-
-          await pool.query(
-            `
-            INSERT INTO payments (user_id, session_id)
-            VALUES ($1, $2)
-            `,
-            [realUserId, session.id]
-          );
-
-          console.log("💳 PREMIUM ACTIVATED:", realUserId);
-
-        } else {
-          console.log("🔁 Duplicate webhook ignored:", session.id);
-        }
-
-      } catch (dbErr) {
-        console.error("❌ DB error in webhook:", dbErr.message);
-      }
-    }
-
-    res.json({ received: true });
-  }
-);
-
-// =========================
-// JSON middleware
-// =========================
-
-app.use((req, res, next) => {
-  if (req.originalUrl === "/api/stripe/webhook") {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
-
-app.use(express.static(path.join(__dirname, "public")));
 
 // =========================
 // AUTH SEND CODE
@@ -438,6 +346,87 @@ app.get("/api/admin/stats", async (req, res) => {
     payments: parseInt(payments.rows[0].count)
   });
 });
+
+// =========================
+// STRIPE WEBHOOK
+// =========================
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        req.headers["stripe-signature"],
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook error:", err.message);
+      return res.status(400).send();
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const userId = session.metadata?.userId;
+
+      if (!userId) {
+        console.log("⚠️ Missing userId in metadata");
+        return res.json({ received: true });
+      }
+
+      const realUserId = Number(userId);
+
+      if (!Number.isFinite(realUserId)) {
+        console.log("❌ Invalid userId:", userId);
+        return res.json({ received: true });
+      }
+
+      const premiumUntil =
+        Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+      try {
+        const exists = await pool.query(
+          `SELECT 1 FROM payments WHERE session_id = $1`,
+          [session.id]
+        );
+
+        if (exists.rowCount === 0) {
+
+          await pool.query(
+            `
+            INSERT INTO subscriptions (user_ref, premium_until)
+            VALUES ($1, $2)
+            ON CONFLICT (user_ref)
+            DO UPDATE SET premium_until = EXCLUDED.premium_until
+            `,
+            [realUserId, premiumUntil]
+          );
+
+          await pool.query(
+            `
+            INSERT INTO payments (user_id, session_id)
+            VALUES ($1, $2)
+            `,
+            [realUserId, session.id]
+          );
+
+          console.log("💳 PREMIUM ACTIVATED:", realUserId);
+
+        } else {
+          console.log("🔁 Duplicate webhook ignored:", session.id);
+        }
+
+      } catch (dbErr) {
+        console.error("❌ DB error in webhook:", dbErr.message);
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
 
 // =========================
 
