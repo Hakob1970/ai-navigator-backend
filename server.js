@@ -101,6 +101,8 @@ async function getUserEmailByTelegram(telegramId) {
  // PREMIUM CHECK
 //--------------------------
 app.get("/api/premium/check", async (req, res) => {
+
+  console.log("🔥 NEW PREMIUM CHECK VERSION HIT");
   try {
     console.log("🔥 PREMIUM CHECK HIT");
 
