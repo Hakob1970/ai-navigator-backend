@@ -151,14 +151,26 @@ app.get("/api/premium/check-telegram", async (req, res) => {
   }
 
   try {
+    // 1. найти email по telegramId
+    const user = await pool.query(
+      `SELECT email FROM users WHERE telegram_id = $1`,
+      [telegramId]
+    );
+
+    if (user.rowCount === 0) {
+      return res.json({ premium: false });
+    }
+
+    const email = user.rows[0].email;
+
+    // 2. проверить premium через email (единая система)
     const result = await pool.query(
       `
-      SELECT s.premium_until
-      FROM subscriptions s
-      JOIN users u ON s.user_ref = u.user_id
-      WHERE u.telegram_id = $1
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_id = $1
       `,
-      [telegramId]
+      [email]
     );
 
     const row = result.rows[0];
@@ -168,7 +180,7 @@ app.get("/api/premium/check-telegram", async (req, res) => {
     }
 
     return res.json({
-      premium: Number(row.premium_until) > Date.now()
+      premium: Number(row.premium_until || 0) > Date.now()
     });
 
   } catch (err) {
