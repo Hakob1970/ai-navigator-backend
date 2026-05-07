@@ -97,95 +97,9 @@ async function getUserEmailByTelegram(telegramId) {
 
   return result.rows[0]?.email;
 }
-
-// =========================
-// AUTH SEND CODE
-// =========================
-
-app.post("/api/auth/send-code", async (req, res) => {
-
-  const { email, sessionId } = req.body;
-
-  if (!email || !sessionId) {
-    return res.status(400).json({ error: "Missing data" });
-  }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = Date.now() + 3 * 60 * 1000;
-
-  await pool.query(
-    `INSERT INTO auth_codes (email, code, session_id, expires_at)
-     VALUES ($1, $2, $3, $4)`,
-    [email, code, sessionId, expires]
-  );
-
-  console.log("🔐 DEV CODE:", email, code);
-
-  res.json({ success: true, dev_code: code });
-});
-
-// =========================
-// VERIFY
-// =========================
-app.post("/api/auth/verify-code", async (req, res) => {
-  const { email, code, sessionId } = req.body;
-
-  try {
-    const result = await pool.query(
-      `SELECT * FROM auth_codes
-       WHERE email = $1 AND code = $2 AND session_id = $3 AND used = 0
-       ORDER BY expires_at DESC
-       LIMIT 1`,
-      [email, code, sessionId]
-    );
-
-    const row = result.rows[0];
-
-    if (!row) return res.status(400).json({ error: "Invalid code" });
-    if (row.expires_at < Date.now()) {
-      return res.status(400).json({ error: "Expired" });
-    }
-
-    await pool.query(
-      `UPDATE auth_codes
-       SET used = 1
-       WHERE email = $1 AND code = $2 AND session_id = $3`,
-      [email, code, sessionId]
-    );
-
-    // ✅ НАХОДИМ ИЛИ СОЗДАЁМ пользователя
-    let user = await pool.query(
-      `SELECT user_id FROM users WHERE email = $1`,
-      [email]
-    );
-
-    let userId;
-
-    if (user.rowCount === 0) {
-      const insert = await pool.query(
-        `INSERT INTO users (email)
-         VALUES ($1)
-         RETURNING user_id`,
-        [email]
-      );
-      userId = insert.rows[0].user_id;
-    } else {
-      userId = user.rows[0].user_id;
-    }
-
-    // ✅ ВАЖНО: возвращаем ЧИСЛО
-    res.json({ success: true, userId });
-
-  } catch (err) {
-    console.error("❌ VERIFY ERROR:", err);
-    res.status(500).json({ error: "server error" });
-  }
-});
-
-// =========================
-// PREMIUM CHECK
-// =========================
-
+//---------------------------
+ // PREMIUM CHECK
+//--------------------------
 app.get("/api/premium/check", async (req, res) => {
   try {
     console.log("🔥 PREMIUM CHECK HIT");
@@ -196,19 +110,13 @@ app.get("/api/premium/check", async (req, res) => {
       return res.json({ premium: false });
     }
 
-    const userIdNum = Number(userId);
-
-    if (!Number.isFinite(userIdNum)) {
-      return res.json({ premium: false });
-    }
-
     const result = await pool.query(
       `
-      SELECT s.premium_until
-      FROM subscriptions s
-      WHERE s.user_ref = $1
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_ref = $1
       `,
-      [userIdNum]
+      [userId]
     );
 
     const row = result.rows[0];
@@ -217,15 +125,16 @@ app.get("/api/premium/check", async (req, res) => {
       return res.json({ premium: false });
     }
 
-    const premiumUntil = Number(row.premium_until);
-
     return res.json({
-      premium: premiumUntil > Date.now()
+      premium: Number(row.premium_until) > Date.now()
     });
 
   } catch (err) {
     console.error("❌ PREMIUM ERROR:", err);
-    return res.status(500).json({ premium: false });
+
+    return res.status(500).json({
+      premium: false
+    });
   }
 });
 
