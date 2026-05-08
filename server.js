@@ -315,6 +315,34 @@ app.post("/api/user/link-telegram", async (req, res) => {
   }
 });
 
+
+app.get("/api/user/get-email", async (req, res) => {
+  try {
+    const { telegramId } = req.query;
+
+    if (!telegramId) {
+      return res.json({ email: null });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT user_id AS email
+      FROM telegram_links
+      WHERE telegram_id = $1
+      `,
+      [telegramId]
+    );
+
+    const email = result.rows[0]?.email || null;
+
+    res.json({ email });
+
+  } catch (err) {
+    console.error("❌ GET EMAIL ERROR:", err);
+    res.json({ email: null });
+  }
+});
+
 // =========================
 // ADMIN STATS
 // =========================
