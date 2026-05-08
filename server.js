@@ -10,19 +10,7 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
-app.use(cors({
-  origin: [
-    "https://ai-navigator-frontend.vercel.app",
-    "http://localhost:5500"
-  ]
-}));
-app.use((req, res, next) => {
-  console.log("🌐 REQUEST:", req.method, req.url);
-  next();
-});
 
 // =========================
 // INIT
@@ -55,30 +43,19 @@ const pool = new Pool({
     );
   `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS auth_codes (
-      email TEXT,
-      code TEXT,
-      session_id TEXT,
-      expires_at BIGINT,
-      used INTEGER DEFAULT 0
-    );
-  `);
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS telegram_links (
+    user_id TEXT PRIMARY KEY,
+    telegram_id TEXT UNIQUE,
+    linked_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+  );
+`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS payments (
       id SERIAL PRIMARY KEY,
       user_id TEXT,
-      session_id TEXT
-    );
-  `);
-
-  // 🔥 ДОБАВЛЯЕМ user_identity ТУДА ЖЕ
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS user_identity (
-      email TEXT PRIMARY KEY,
-      telegram_id TEXT,
-      created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+      session_id TEXT UNIQUE
     );
   `);
 
@@ -86,55 +63,170 @@ const pool = new Pool({
 })();
 
 // =========================
-// HELPERS
+// STRIPE WEBHOOK
 // =========================
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
 
-async function getUserEmailByTelegram(telegramId) {
+    let event;
+
+    try {
+
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        req.headers["stripe-signature"],
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+
+    } catch (err) {
+
+      console.error("❌ Webhook error:", err.message);
+
+      return res.status(400).send();
+    }
+
+    if (event.type === "checkout.session.completed") {
+
+      const session = event.data.object;
+
+      const userId = session.metadata?.userId;
+
+      if (!userId) {
+        return res.json({ received: true });
+      }
+
+      try {
+
+        const exists = await pool.query(
+          `
+          SELECT 1
+          FROM payments
+          WHERE session_id = $1
+          `,
+          [session.id]
+        );
+
+        if (exists.rowCount === 0) {
+
+          const premiumUntil =
+            Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+          // user auto-create
+          await pool.query(
+            `
+            INSERT INTO users (user_id)
+            VALUES ($1)
+            ON CONFLICT (user_id)
+            DO NOTHING
+            `,
+            [userId]
+          );
+
+          // subscription
+          await pool.query(
+            `
+            INSERT INTO subscriptions (
+              user_id,
+              premium_until
+            )
+            VALUES ($1, $2)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+              premium_until = EXCLUDED.premium_until
+            `,
+            [userId, premiumUntil]
+          );
+
+          // payment log
+          await pool.query(
+            `
+            INSERT INTO payments (
+              user_id,
+              session_id
+            )
+            VALUES ($1, $2)
+            `,
+            [userId, session.id]
+          );
+
+          console.log("✅ PREMIUM ACTIVATED:", userId);
+
+        } else {
+
+          console.log("🔁 Duplicate webhook ignored");
+
+        }
+
+      } catch (dbErr) {
+
+        console.error("❌ DB ERROR:", dbErr);
+
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// =========================
+// NORMAL MIDDLEWARE (AFTER WEBHOOK)
+// =========================
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use(cors({
+  origin: [
+    "https://ai-navigator-frontend.vercel.app",
+    "http://localhost:5500"
+  ]
+}));
+
+app.use((req, res, next) => {
+  console.log("🌐 REQUEST:", req.method, req.url);
+  next();
+});
+
+
+
+async function isPremium(userId) {
+
+  if (!userId) return false;
+
   const result = await pool.query(
-    `SELECT email FROM user_identity WHERE telegram_id = $1`,
-    [telegramId]
+    `
+    SELECT premium_until
+    FROM subscriptions
+    WHERE user_id = $1
+    `,
+    [userId]
   );
 
-  return result.rows[0]?.email;
+  const row = result.rows[0];
+
+  if (!row) return false;
+
+  return Number(row.premium_until) > Date.now();
 }
 //---------------------------
  // PREMIUM CHECK
 //--------------------------
 app.get("/api/premium/check", async (req, res) => {
 
-  console.log("🔥 NEW PREMIUM CHECK VERSION HIT");
   try {
-    console.log("🔥 PREMIUM CHECK HIT");
 
     const { userId } = req.query;
 
-    if (!userId) {
-      return res.json({ premium: false });
-    }
+    const premium = await isPremium(userId);
 
-    const result = await pool.query(
-      `
-      SELECT premium_until
-      FROM subscriptions
-     WHERE user_id = $1
-      `,
-      [userId]
-    );
-
-    const row = result.rows[0];
-
-    if (!row) {
-      return res.json({ premium: false });
-    }
-
-    return res.json({
-      premium: Number(row.premium_until) > Date.now()
-    });
+    res.json({ premium });
 
   } catch (err) {
-    console.error("❌ PREMIUM ERROR:", err);
 
-    return res.status(500).json({
+    console.error("❌ PREMIUM CHECK ERROR:", err);
+
+    res.status(500).json({
       premium: false
     });
   }
@@ -170,29 +262,56 @@ cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
 
 
 app.post("/api/user/link-telegram", async (req, res) => {
-  const { userId, telegramId } = req.body;
-
-  if (!userId || !telegramId) {
-    return res.status(400).json({ error: "Missing data" });
-  }
 
   try {
+
+    const { userId, telegramId } = req.body;
+
+    if (!userId || !telegramId) {
+      return res.status(400).json({
+        error: "Missing data"
+      });
+    }
+
+    // user create
     await pool.query(
       `
-      UPDATE users
-      SET telegram_id = $1
-      WHERE user_id = $2
+      INSERT INTO users (user_id)
+      VALUES ($1)
+      ON CONFLICT (user_id)
+      DO NOTHING
       `,
-      [telegramId, userId]
+      [userId]
     );
 
-    console.log("🔗 Telegram linked:", userId, telegramId);
+    // telegram link
+    await pool.query(
+      `
+      INSERT INTO telegram_links (
+        user_id,
+        telegram_id
+      )
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        telegram_id = EXCLUDED.telegram_id
+      `,
+      [userId, telegramId]
+    );
 
-    res.json({ success: true });
+    console.log("🔗 TELEGRAM LINKED:", userId);
+
+    res.json({
+      success: true
+    });
 
   } catch (err) {
-    console.error("❌ link-telegram error:", err);
-    res.status(500).json({ error: "server error" });
+
+    console.error("❌ TELEGRAM LINK ERROR:", err);
+
+    res.status(500).json({
+      error: "Server error"
+    });
   }
 });
 
@@ -208,10 +327,14 @@ app.get("/api/admin/stats", async (req, res) => {
   }
 
   const users = await pool.query(`SELECT COUNT(*) FROM users`);
-  const premium = await pool.query(
-    `SELECT COUNT(*) FROM subscriptions WHERE premium_until > $1`,
-    [Date.now()]
-  );
+const premium = await pool.query(
+  `
+  SELECT COUNT(*)
+  FROM subscriptions
+  WHERE premium_until > $1
+  `,
+  [Date.now()]
+);
   const payments = await pool.query(`SELECT COUNT(*) FROM payments`);
 
   res.json({
@@ -221,79 +344,6 @@ app.get("/api/admin/stats", async (req, res) => {
   });
 });
 
-// =========================
-// STRIPE WEBHOOK
-// =========================
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        req.headers["stripe-signature"],
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("❌ Webhook error:", err.message);
-      return res.status(400).send();
-    }
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-
-      // 💥 EMAIL = USER ID (НОРМАЛЬНАЯ МОДЕЛЬ)
-      const userId = session.metadata?.userId;
-
-      if (!userId) {
-        console.log("⚠️ Missing userId in metadata");
-        return res.json({ received: true });
-      }
-
-      const premiumUntil = Date.now() + 30 * 24 * 60 * 60 * 1000;
-
-      try {
-        const exists = await pool.query(
-          `SELECT 1 FROM payments WHERE session_id = $1`,
-          [session.id]
-        );
-
-        if (exists.rowCount === 0) {
-
-          await pool.query(
-            `
-            INSERT INTO subscriptions (user_ref, premium_until)
-            VALUES ($1, $2)
-            ON CONFLICT (user_ref)
-            DO UPDATE SET premium_until = EXCLUDED.premium_until
-            `,
-            [userId, premiumUntil]
-          );
-
-          await pool.query(
-            `
-            INSERT INTO payments (user_id, session_id)
-            VALUES ($1, $2)
-            `,
-            [userId, session.id]
-          );
-
-          console.log("💳 PREMIUM ACTIVATED:", userId);
-
-        } else {
-          console.log("🔁 Duplicate webhook ignored:", session.id);
-        }
-
-      } catch (dbErr) {
-        console.error("❌ DB error in webhook:", dbErr.message);
-      }
-    }
-
-    res.json({ received: true });
-  }
-);
 
 // =========================
 
