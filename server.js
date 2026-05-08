@@ -319,6 +319,9 @@ app.post("/api/user/link-telegram", async (req, res) => {
 
 
 app.get("/api/user/get-email", async (req, res) => {
+
+console.log("GET EMAIL telegramId:", req.query.telegramId);
+  
   try {
     const { telegramId } = req.query;
 
@@ -336,7 +339,8 @@ app.get("/api/user/get-email", async (req, res) => {
     );
 
     const email = result.rows[0]?.email || null;
-
+    
+console.log("EMAIL FOUND:", result);
     res.json({ email });
 
   } catch (err) {
