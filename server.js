@@ -265,6 +265,7 @@ app.post("/api/user/link-telegram", async (req, res) => {
 
   try {
 
+    console.log("🔥 LINK-TELEGRAM BODY:", req.body);
     console.log("LINK REQUEST:", req.body);
     const { userId, telegramId } = req.body;
 
