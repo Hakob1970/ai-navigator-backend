@@ -329,19 +329,21 @@ console.log("GET EMAIL telegramId:", req.query.telegramId);
       return res.json({ email: null });
     }
 
-    const result = await pool.query(
-      `
-      SELECT user_id AS email
-      FROM telegram_links
-      WHERE telegram_id = $1
-      `,
-      [telegramId]
-    );
+const result = await pool.query(
+  `
+  SELECT user_id
+  FROM telegram_links
+  WHERE telegram_id = $1
+  LIMIT 1
+  `,
+  [telegramId]
+);
 
-    const email = result.rows[0]?.email || null;
-    
-console.log("EMAIL FOUND:", result);
-    res.json({ email });
+const email = result.rows[0]?.user_id || null;
+
+console.log("EMAIL FOUND:", email);
+
+res.json({ email });
 
   } catch (err) {
     console.error("❌ GET EMAIL ERROR:", err);
