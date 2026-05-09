@@ -317,7 +317,7 @@ console.log("GET EMAIL telegramId:", req.query.telegramId);
 
 const result = await pool.query(
   `
-  SELECT email
+  SELECT user_id
   FROM telegram_links
   WHERE telegram_id = $1
   LIMIT 1
@@ -325,7 +325,7 @@ const result = await pool.query(
   [telegramId]
 );
 
-const email = result.rows[0]?.email || null;
+const email = result.rows[0]?.user_id || null;
 
 console.log("EMAIL FOUND:", email);
 
