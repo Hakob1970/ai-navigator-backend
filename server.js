@@ -337,6 +337,113 @@ res.json({ email });
   }
 });
 
+app.post("/api/user/change-email", async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { oldEmail, newEmail } = req.body;
+
+    if (!oldEmail || !newEmail) {
+      return res.status(400).json({ error: "Missing email data" });
+    }
+
+    const oldUserId = String(oldEmail).trim().toLowerCase();
+    const newUserId = String(newEmail).trim().toLowerCase();
+
+    if (oldUserId === newUserId) {
+      return res.json({ success: true, userId: newUserId });
+    }
+
+    await client.query("BEGIN");
+
+    const existingNewUser = await client.query(
+      `
+      SELECT user_id
+      FROM users
+      WHERE user_id = $1
+      LIMIT 1
+      `,
+      [newUserId]
+    );
+
+    if (existingNewUser.rowCount > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "New email already exists"
+      });
+    }
+
+    await client.query(
+      `
+      INSERT INTO users (user_id)
+      VALUES ($1)
+      ON CONFLICT (user_id)
+      DO NOTHING
+      `,
+      [newUserId]
+    );
+
+    await client.query(
+      `
+      UPDATE subscriptions
+      SET user_id = $1
+      WHERE user_id = $2
+      `,
+      [newUserId, oldUserId]
+    );
+
+    await client.query(
+      `
+      UPDATE telegram_links
+      SET user_id = $1
+      WHERE user_id = $2
+      `,
+      [newUserId, oldUserId]
+    );
+
+    await client.query(
+      `
+      UPDATE payments
+      SET user_id = $1
+      WHERE user_id = $2
+      `,
+      [newUserId, oldUserId]
+    );
+
+    await client.query(
+      `
+      DELETE FROM users
+      WHERE user_id = $1
+      `,
+      [oldUserId]
+    );
+
+    await client.query("COMMIT");
+
+    console.log("✅ EMAIL CHANGED:", oldUserId, "=>", newUserId);
+
+    res.json({
+      success: true,
+      userId: newUserId
+    });
+
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {}
+
+    console.error("❌ CHANGE EMAIL ERROR:", err);
+
+    res.status(500).json({
+      error: "Server error"
+    });
+
+  } finally {
+    client.release();
+  }
+});
+
+
 // =========================
 // ADMIN STATS
 // =========================
