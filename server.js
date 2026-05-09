@@ -262,20 +262,13 @@ cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
 
 
 app.post("/api/user/link-telegram", async (req, res) => {
-
   try {
+    const { email, telegramId } = req.body;
 
-    console.log("🔥 LINK-TELEGRAM BODY:", req.body);
-    console.log("LINK REQUEST:", req.body);
-    const { userId, telegramId } = req.body;
-
-    if (!userId || !telegramId) {
-      return res.status(400).json({
-        error: "Missing data"
-      });
+    if (!email || !telegramId) {
+      return res.status(400).json({ error: "Missing data" });
     }
 
-    // user create
     await pool.query(
       `
       INSERT INTO users (user_id)
@@ -283,10 +276,9 @@ app.post("/api/user/link-telegram", async (req, res) => {
       ON CONFLICT (user_id)
       DO NOTHING
       `,
-      [userId]
+      [email]
     );
 
-    // telegram link
     await pool.query(
       `
       INSERT INTO telegram_links (
@@ -298,22 +290,16 @@ app.post("/api/user/link-telegram", async (req, res) => {
       DO UPDATE SET
         telegram_id = EXCLUDED.telegram_id
       `,
-      [userId, telegramId]
+      [email, telegramId]
     );
 
-    console.log("🔗 TELEGRAM LINKED:", userId);
+    console.log("🔗 TELEGRAM LINKED:", email);
 
-    res.json({
-      success: true
-    });
+    res.json({ success: true });
 
   } catch (err) {
-
     console.error("❌ TELEGRAM LINK ERROR:", err);
-
-    res.status(500).json({
-      error: "Server error"
-    });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -331,7 +317,7 @@ console.log("GET EMAIL telegramId:", req.query.telegramId);
 
 const result = await pool.query(
   `
-  SELECT user_id
+  SELECT email
   FROM telegram_links
   WHERE telegram_id = $1
   LIMIT 1
@@ -339,7 +325,7 @@ const result = await pool.query(
   [telegramId]
 );
 
-const email = result.rows[0]?.user_id || null;
+const email = result.rows[0]?.email || null;
 
 console.log("EMAIL FOUND:", email);
 
