@@ -233,6 +233,50 @@ app.get("/api/premium/check", async (req, res) => {
 });
 
 // =========================
+// TELEGRAM PREMIUM LINK
+// =========================
+app.post("/api/telegram/create-link", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        allowed: false,
+        error: "Missing email"
+      });
+    }
+
+    const userId = String(email).trim().toLowerCase();
+    const premium = await isPremium(userId);
+
+    if (!premium) {
+      return res.status(403).json({
+        allowed: false,
+        redirect: "#pricing"
+      });
+    }
+
+    const botUsername = "hakob_ai_it_bot";
+    const telegramUrl =
+      `https://t.me/${botUsername}?start=${encodeURIComponent(userId)}`;
+
+    res.json({
+      allowed: true,
+      url: telegramUrl
+    });
+
+  } catch (err) {
+    console.error("❌ TELEGRAM CREATE LINK ERROR:", err);
+
+    res.status(500).json({
+      allowed: false,
+      error: "Server error"
+    });
+  }
+});
+
+
+// =========================
 // STRIPE CHECKOUT
 // =========================
 
