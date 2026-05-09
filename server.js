@@ -356,22 +356,23 @@ app.post("/api/user/change-email", async (req, res) => {
 
     await client.query("BEGIN");
 
-    const existingNewUser = await client.query(
-      `
-      SELECT user_id
-      FROM users
-      WHERE user_id = $1
-      LIMIT 1
-      `,
-      [newUserId]
-    );
+  const existingOldUser = await client.query(
+  `
+  SELECT user_id
+  FROM users
+  WHERE user_id = $1
+  LIMIT 1
+  `,
+  [oldUserId]
+);
 
-    if (existingNewUser.rowCount > 0) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        error: "New email already exists"
-      });
-    }
+if (existingOldUser.rowCount === 0) {
+  await client.query("ROLLBACK");
+  return res.status(404).json({
+    error: "Old email not found"
+  });
+}
+
 
     await client.query(
       `
