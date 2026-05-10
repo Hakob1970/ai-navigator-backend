@@ -8,7 +8,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, ContextTyp
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 import os
+
+print("BOT STARTING...")
+
 TOKEN = os.environ["BOT_TOKEN"]
+ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
@@ -237,6 +241,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+print("FLASK THREAD STARTING...")
 
 
 from flask import Flask
