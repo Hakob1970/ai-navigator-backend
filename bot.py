@@ -7,7 +7,8 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8645293983:AAEfUVCWatvE7klR1g1TC6_QBRZm6wdQ1Zc"
+import os
+TOKEN = os.environ["BOT_TOKEN"]
 
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
@@ -236,3 +237,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+from flask import Flask
+import os
+from threading import Thread
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "AI Bot is running"
+
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+Thread(target=run).start()
