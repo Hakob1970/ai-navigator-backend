@@ -232,6 +232,48 @@ app.get("/api/premium/check", async (req, res) => {
   }
 });
 
+
+app.get("/api/likes", async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS site_likes (
+        id TEXT PRIMARY KEY,
+        count BIGINT DEFAULT 0
+      );
+    `);
+
+    const result = await pool.query(`
+      INSERT INTO site_likes (id, count)
+      VALUES ('main', 0)
+      ON CONFLICT (id) DO UPDATE SET count = site_likes.count
+      RETURNING count
+    `);
+
+    res.json({ likes: Number(result.rows[0].count) });
+  } catch (err) {
+    console.error("❌ LIKES GET ERROR:", err);
+    res.status(500).json({ likes: 0 });
+  }
+});
+
+app.post("/api/likes", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      INSERT INTO site_likes (id, count)
+      VALUES ('main', 1)
+      ON CONFLICT (id)
+      DO UPDATE SET count = site_likes.count + 1
+      RETURNING count
+    `);
+
+    res.json({ likes: Number(result.rows[0].count) });
+  } catch (err) {
+    console.error("❌ LIKES POST ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 // =========================
 // TELEGRAM PREMIUM LINK
 // =========================
