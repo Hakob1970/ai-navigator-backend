@@ -177,41 +177,41 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # DISCUSS
     # =========================
-  if "💬 Discussion Club" in text:
+    if "💬 Discussion Club" in text:
 
-    email = None
+        email = None
 
-    if context.args:
-        email = context.args[0].strip().lower()
+        if context.args:
+            email = context.args[0].strip().lower()
 
-    print("DISCUSSION CLUB EMAIL:", email)
+        print("DISCUSSION CLUB EMAIL:", email)
 
-    premium = is_premium(email) if email else False
+        premium = is_premium(email) if email else False
 
-    print("DISCUSSION CLUB PREMIUM:", premium)
+        print("DISCUSSION CLUB PREMIUM:", premium)
 
-    if premium:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("Open Discussion Club", url="https://t.me/+UnxQr7zNlrI5Njhi")]
-        ])
+        if premium:
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Open Discussion Club", url="https://t.me/+UnxQr7zNlrI5Njhi")]
+            ])
 
-        await update.message.reply_text(
-            "💬 Discussion Club\n\nWelcome to the private AI community 🚀",
-            reply_markup=keyboard
-        )
+            await update.message.reply_text(
+                "💬 Discussion Club\n\nWelcome to the private AI community 🚀",
+                reply_markup=keyboard
+            )
 
-    else:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("Get Premium", url=f"https://ai-navigator-frontend.vercel.app/?email={email}#pricing")]
-        ])
+        else:
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("Get Premium", url=f"https://ai-navigator-frontend.vercel.app/?email={email}#pricing")]
+            ])
 
-        await update.message.reply_text(
-            "🔒 Discussion Club is for Premium users only\n\n"
-            f"👉 https://ai-navigator-frontend.vercel.app/?email={email}#pricing",
-            reply_markup=keyboard
-        )
+            await update.message.reply_text(
+                "🔒 Discussion Club is for Premium users only\n\n"
+                f"👉 https://ai-navigator-frontend.vercel.app/?email={email}#pricing",
+                reply_markup=keyboard
+            )
 
-    return
+     return
 
 
     # DEFAULT
