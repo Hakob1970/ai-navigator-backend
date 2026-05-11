@@ -210,7 +210,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👉 https://ai-navigator-frontend.vercel.app/?email={email}#pricing",
                 reply_markup=keyboard
             )
-    return
+
+        return
 
 
     # DEFAULT
