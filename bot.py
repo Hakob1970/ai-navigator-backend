@@ -166,7 +166,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # NEWS
     # =========================
-     if "📰 AI News" in text:
+    if "📰 AI News" in text:
         feed = feedparser.parse("https://techcrunch.com/rss")
 
         for entry in feed.entries[:4]:
