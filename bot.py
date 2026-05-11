@@ -181,7 +181,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         email = None
 
         if context.args:
-        email = context.args[0].strip().lower()
+            email = context.args[0].strip().lower()
 
         print("DISCUSSION CLUB EMAIL:", email)
 
