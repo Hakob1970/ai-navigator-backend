@@ -182,34 +182,35 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     if "💬 Discussion Club" in text:
 
-        res = requests.get(
-            f"{BACKEND}/api/user/context",
-            params={"telegramId": user_id},
-            timeout=3
-        )
+    # 1. получаем email по telegramId
+        email = get_email(user_id)
 
-        print("STATUS:", res.status_code)
-        print("TEXT:", res.text)
+        print("DISCUSSION CLUB EMAIL:", email)
 
-        if res.status_code != 200:
-            email = None
-            premium = False
-        else:
+        premium = False
+
+    # 2. проверяем premium ТОЛЬКО через backend
+        if email:
+            res = requests.get(
+                f"{BACKEND}/api/premium/check",
+                params={"userId": email},
+                timeout=3
+            )
+
             try:
                 data = res.json()
-            except Exception as e:
-                print("JSON ERROR:", e)
-                email = None
-                premium = False
-            else:
-                email = data.get("email")
                 premium = data.get("premium", False)
+            except:
+                premium = False
 
+        print("DISCUSSION CLUB PREMIUM:", premium)
+
+    # 3. доступ
         if premium:
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
                     "Open Discussion Club",
-                url="https://t.me/+UnxQr7zNlrI5Njhi"
+                    url="https://t.me/+UnxQr7zNlrI5Njhi"
                 )]
             ])
 
@@ -222,7 +223,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
                     "Get Premium",
-                url="https://ai-navigator-frontend.vercel.app/#pricing"
+                    url="https://ai-navigator-frontend.vercel.app/#pricing"
                 )]
             ])
 
