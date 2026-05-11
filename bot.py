@@ -97,6 +97,8 @@ def is_premium(email):
     except:
         return False
 
+
+
 # =========================
 # MENU
 # =========================
@@ -183,7 +185,16 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "💬 Discussion Club" in text:
 
     # 1. получаем email по telegramId
-        email = get_email(user_id)
+        res = requests.get(
+            f"{BACKEND}/api/user/get-email",
+            params={"telegramId": str(user_id)},
+            timeout=3
+        )
+
+        try:
+            email = res.json().get("email")
+        except:
+            email = None
 
         print("DISCUSSION CLUB EMAIL:", email)
 
