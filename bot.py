@@ -210,15 +210,14 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👉 https://ai-navigator-frontend.vercel.app/?email={email}#pricing",
                 reply_markup=keyboard
             )
-
-      return
+    return
 
 
     # DEFAULT
     await update.message.reply_text("Use the menu 👇")
 
 # =========================
-# MAIN
+# MAIN 
 # =========================
 def main():
     app = Application.builder().token(TOKEN).build()
