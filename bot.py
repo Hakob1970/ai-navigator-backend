@@ -79,7 +79,7 @@ def get_email(user_id):
     try:
         res = requests.get(
             f"{BACKEND}/api/user/get-email",
-            params={"telegramId": user_id},
+            params={"telegramId": str(user_id)},
             timeout=3
         )
         return res.json().get("email")
