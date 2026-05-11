@@ -198,12 +198,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 data = res.json()
             except Exception as e:
-            print("JSON ERROR:", e)
-            email = None
-            premium = False
-        else:
-            email = data.get("email")
-            premium = data.get("premium", False)
+                print("JSON ERROR:", e)
+                email = None
+                premium = False
+            else:
+                email = data.get("email")
+                premium = data.get("premium", False)
 
         if premium:
             keyboard = InlineKeyboardMarkup([
