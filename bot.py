@@ -166,6 +166,15 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # NEWS
     # =========================
+     if "📰 AI News" in text:
+        feed = feedparser.parse("https://techcrunch.com/rss")
+
+        for entry in feed.entries[:4]:
+            await update.message.reply_text(f"{entry.title}\n{entry.link}")
+        return
+
+
+    
     if "💬 Discussion Club" in text:
 
     # 1. берём email только из /start или сохранённого аргумента
