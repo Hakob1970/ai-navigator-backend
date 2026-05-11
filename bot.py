@@ -182,20 +182,28 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     if "💬 Discussion Club" in text:
 
-    # ✔ получаем ВСЁ только из backend
         res = requests.get(
             f"{BACKEND}/api/user/context",
             params={"telegramId": user_id},
             timeout=3
         )
 
-        data = res.json()
+        print("STATUS:", res.status_code)
+        print("TEXT:", res.text)
 
-        email = data.get("email")
-        premium = data.get("premium", False)
-
-        print("DISCUSSION CLUB EMAIL:", email)
-        print("DISCUSSION CLUB PREMIUM:", premium)
+        if res.status_code != 200:
+            email = None
+            premium = False
+        else:
+            try:
+                data = res.json()
+            except Exception as e:
+            print("JSON ERROR:", e)
+            email = None
+            premium = False
+        else:
+            email = data.get("email")
+            premium = data.get("premium", False)
 
         if premium:
             keyboard = InlineKeyboardMarkup([
