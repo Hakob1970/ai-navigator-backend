@@ -153,14 +153,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # HANDLER
 # =========================
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     user_id = update.effective_user.id
     username = update.effective_user.username or "user"
 
     text = update.message.text.strip()
-    email = get_email(user_id)
+
     print("🔥 HANDLE ENTERED")
     print("CLICKED TEXT:", text)
-    print("TEXT RECEIVED:", repr(text)) 
+    print("TEXT RECEIVED:", repr(text))
+
     register_user(user_id, username)
 
     # =========================
@@ -171,31 +173,29 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         for entry in feed.entries[:4]:
             await update.message.reply_text(f"{entry.title}\n{entry.link}")
+
         return
 
 
-    
+    # =========================
+    # DISCUSSION CLUB
+    # =========================
     if "💬 Discussion Club" in text:
 
-    # 1. берём email только из /start или сохранённого аргумента
-        email = None
-
-        if context.args:
-            email = context.args[0].strip().lower()
+        # ✔ ЕДИНЫЙ ИСТОЧНИК — backend по telegramId
+        email = get_email(user_id)
 
         print("DISCUSSION CLUB EMAIL:", email)
 
-    # 2. проверка premium ТОЛЬКО по email
         premium = is_premium(email) if email else False
 
         print("DISCUSSION CLUB PREMIUM:", premium)
 
-    # 3. если premium — даём доступ
         if premium:
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
                     "Open Discussion Club",
-                url="https://t.me/+UnxQr7zNlrI5Njhi"
+                    url="https://t.me/+UnxQr7zNlrI5Njhi"
                 )]
             ])
 
@@ -204,25 +204,26 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=keyboard
             )
 
-    # 4. если нет premium — ведём на оплату
         else:
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
                     "Get Premium",
-                url=f"https://ai-navigator-frontend.vercel.app/?email={email}#pricing"
+                    url="https://ai-navigator-frontend.vercel.app/#pricing"
                 )]
             ])
 
             await update.message.reply_text(
                 "🔒 Discussion Club is for Premium users only\n\n"
-                f"👉 https://ai-navigator-frontend.vercel.app/?email={email}#pricing",
-            reply_markup=keyboard
+                "👉 https://ai-navigator-frontend.vercel.app/#pricing",
+                reply_markup=keyboard
             )
 
         return
 
 
+    # =========================
     # DEFAULT
+    # =========================
     await update.message.reply_text("Use the menu 👇")
 
 # =========================
