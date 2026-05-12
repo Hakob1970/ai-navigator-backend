@@ -198,48 +198,16 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         print("DISCUSSION CLUB EMAIL:", email)
 
-    # =========================
-    # 2. DEVICE LIMIT (ВАЖНО)
-    # =========================
-        if email:
-            device_id = "tg_" + str(user_id)
-
-            res = requests.post(
-                f"{BACKEND}/api/device/check",
-                json={
-                    "email": email,
-                    "deviceId": device_id
-                },
-                timeout=3
-            )
-
-            try:
-                allowed = res.json().get("allowed", False)
-            except:
-                allowed = False
-
-            print("DEVICE ALLOWED:", allowed)
-
-            if not allowed:
-                await update.message.reply_text(
-                    "❌ Device limit reached (max 3 devices)\n\n"
-                    "Remove one device or use another account."
-                )
-            return
-
-    # =========================
-    # 3. PREMIUM CHECK
-    # =========================
+    # 2. проверка premium
         premium = False
 
         if email:
-            res = requests.get(
-                f"{BACKEND}/api/premium/check",
-                params={"userId": email},
-                timeout=3
-            )
-
             try:
+                res = requests.get(
+                    f"{BACKEND}/api/premium/check",
+                    params={"userId": email},
+                    timeout=3
+                )
                 data = res.json()
                 premium = data.get("premium", False)
             except:
@@ -247,35 +215,24 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         print("DISCUSSION CLUB PREMIUM:", premium)
 
-    # =========================
-    # 4. ACCESS
-    # =========================
+    # 3. ответ пользователю (СТАБИЛЬНАЯ ВЕРСИЯ)
+
         if premium:
-            print("SENDING MESSAGE TO USER")
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton(
-                    "Open Discussion Club",
-                    url="https://t.me/+UnxQr7zNlrI5Njhi"
-                )]
-            ])
+
+            print("USER HAS PREMIUM → sending link")
 
             await update.message.reply_text(
-                "💬 Discussion Club\n\nWelcome to the private AI community 🚀",
-                reply_markup=keyboard
+                "💬 Discussion Club\n\nWelcome to the private AI community 🚀\n\n"
+                "👉 Open link: https://t.me/+UnxQr7zNlrI5Njhi"
             )
 
         else:
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton(
-                    "Get Premium",
-                    url="https://ai-navigator-frontend.vercel.app/#pricing"
-                )]
-            ])
+
+            print("USER NO PREMIUM → showing pricing")
 
             await update.message.reply_text(
                 "🔒 Discussion Club is for Premium users only\n\n"
-                "👉 https://ai-navigator-frontend.vercel.app/#pricing",
-                reply_markup=keyboard
+                "👉 Upgrade here: https://ai-navigator-frontend.vercel.app/#pricing"
             )
 
         return
