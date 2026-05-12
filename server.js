@@ -274,14 +274,15 @@ app.post("/api/device/check", async (req, res) => {
     }
 
     // считаем устройства
-    const countResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM user_devices
-      WHERE email = $1
-      `,
-      [email]
-    );
+  const countResult = await pool.query(
+  `
+  SELECT COUNT(*)::int AS count
+  FROM user_devices
+  WHERE email = $1
+  AND device_id NOT LIKE 'tg_%'
+  `,
+  [email]
+);
 
     const count = countResult.rows[0].count;
 
@@ -294,16 +295,17 @@ app.post("/api/device/check", async (req, res) => {
     }
 
     // добавляем устройство
+if not deviceId.startswith("tg_"):
     await pool.query(
-      `
-      INSERT INTO user_devices (
-        email,
-        device_id
-      )
-      VALUES ($1, $2)
-      `,
-      [email, deviceId]
-    );
+        """
+        INSERT INTO user_devices (
+            email,
+            device_id
+        )
+        VALUES ($1, $2)
+        """,
+        [email, deviceId]
+    )
 
     res.json({
       allowed: true
