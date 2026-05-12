@@ -233,6 +233,93 @@ app.get("/api/premium/check", async (req, res) => {
 });
 
 
+app.post("/api/device/check", async (req, res) => {
+  try {
+
+    const { email, deviceId } = req.body;
+
+    if (!email || !deviceId) {
+      return res.json({
+        allowed: false
+      });
+    }
+
+    // устройство уже существует
+    const existing = await pool.query(
+      `
+      SELECT *
+      FROM user_devices
+      WHERE email = $1
+      AND device_id = $2
+      LIMIT 1
+      `,
+      [email, deviceId]
+    );
+
+    if (existing.rows.length > 0) {
+
+      await pool.query(
+        `
+        UPDATE user_devices
+        SET last_seen = NOW()
+        WHERE email = $1
+        AND device_id = $2
+        `,
+        [email, deviceId]
+      );
+
+      return res.json({
+        allowed: true
+      });
+    }
+
+    // считаем устройства
+    const countResult = await pool.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM user_devices
+      WHERE email = $1
+      `,
+      [email]
+    );
+
+    const count = countResult.rows[0].count;
+
+    // лимит
+    if (count >= 3) {
+      return res.json({
+        allowed: false,
+        error: "DEVICE_LIMIT"
+      });
+    }
+
+    // добавляем устройство
+    await pool.query(
+      `
+      INSERT INTO user_devices (
+        email,
+        device_id
+      )
+      VALUES ($1, $2)
+      `,
+      [email, deviceId]
+    );
+
+    res.json({
+      allowed: true
+    });
+
+  } catch (err) {
+
+    console.error("DEVICE CHECK ERROR:", err);
+
+    res.status(500).json({
+      allowed: false
+    });
+  }
+});
+
+
 app.get("/api/likes", async (req, res) => {
   try {
     await pool.query(`
