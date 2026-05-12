@@ -251,6 +251,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 4. ACCESS
     # =========================
         if premium:
+            print("SENDING MESSAGE TO USER")
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton(
                     "Open Discussion Club",
