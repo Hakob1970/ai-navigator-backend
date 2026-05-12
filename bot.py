@@ -202,7 +202,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 2. DEVICE LIMIT (ВАЖНО)
     # =========================
         if email:
-            device_id = str(user_id)
+            device_id = "tg_" + str(user_id)
 
             res = requests.post(
                 f"{BACKEND}/api/device/check",
