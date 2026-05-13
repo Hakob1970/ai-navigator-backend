@@ -52,6 +52,20 @@ await pool.query(`
 `);
 
   await pool.query(`
+  CREATE TABLE IF NOT EXISTS user_devices (
+    id SERIAL PRIMARY KEY,
+    email TEXT,
+    device_id TEXT,
+    last_seen TIMESTAMP DEFAULT NOW()
+  );
+`);
+
+  await pool.query(`
+  CREATE UNIQUE INDEX IF NOT EXISTS user_device_unique
+  ON user_devices(email, device_id)
+`);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS payments (
       id SERIAL PRIMARY KEY,
       user_id TEXT,
@@ -295,17 +309,19 @@ app.post("/api/device/check", async (req, res) => {
     }
 
     // добавляем устройство
-if not deviceId.startswith("tg_"):
-    await pool.query(
-        """
-        INSERT INTO user_devices (
-            email,
-            device_id
-        )
-        VALUES ($1, $2)
-        """,
-        [email, deviceId]
-    )
+if (!deviceId.startsWith("tg_")) {
+
+ await pool.query(
+  `
+  INSERT INTO user_devices (
+    email,
+    device_id
+  )
+  VALUES ($1, $2)
+  ON CONFLICT DO NOTHING
+  `,
+  [email, deviceId]
+);
 
     res.json({
       allowed: true
