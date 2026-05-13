@@ -219,11 +219,18 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if premium:
 
-            print("USER HAS PREMIUM → sending link")
+            print("USER HAS PREMIUM → sending button")
+
+            keyboard = ReplyKeyboardMarkup(
+                [
+                    ["🚀 Open Discussion Club"]
+                ],
+                resize_keyboard=True
+            )
 
             await update.message.reply_text(
-                "💬 Discussion Club\n\nWelcome to the private AI community 🚀\n\n"
-                "👉 Open link: https://t.me/+UnxQr7zNlrI5Njhi"
+                "💬 Discussion Club\n\nWelcome to the private AI community 🚀",
+                reply_markup=keyboard
             )
 
         else:
@@ -237,7 +244,18 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
+    
+    # =========================
+    # OPEN DISCUSSION LINK
+    # =========================
+    if "🚀 Open Discussion Club" in text:
 
+        await update.message.reply_text(
+            "👉 https://t.me/+UnxQr7zNlrI5Njhi"
+        )
+
+        return
+            
     # =========================
     # DEFAULT
     # =========================
