@@ -182,23 +182,26 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # DISCUSSION CLUB
     # =========================
-    if "💬 Discussion Club" in text:
 
-    # 1. получаем email по telegramId
-        res = requests.get(
-            f"{BACKEND}/api/user/get-email",
-            params={"telegramId": str(user_id)},
-            timeout=3
-        )
+    if text == "💬 Discussion Club":
 
+        # 1. получаем email по telegramId
         try:
+            res = requests.get(
+                f"{BACKEND}/api/user/get-email",
+                params={"telegramId": str(user_id)},
+                timeout=3
+            )
+
             email = res.json().get("email")
-        except:
+
+        except Exception as e:
+            print("GET EMAIL ERROR:", e)
             email = None
 
         print("DISCUSSION CLUB EMAIL:", email)
 
-    # 2. проверка premium
+        # 2. проверка premium
         premium = False
 
         if email:
@@ -208,15 +211,17 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     params={"userId": email},
                     timeout=3
                 )
+
                 data = res.json()
                 premium = data.get("premium", False)
-            except:
+
+            except Exception as e:
+                print("PREMIUM CHECK ERROR:", e)
                 premium = False
 
         print("DISCUSSION CLUB PREMIUM:", premium)
 
-    # 3. ответ пользователю (СТАБИЛЬНАЯ ВЕРСИЯ)
-
+        # 3. ответ пользователю
         if premium:
 
             print("USER HAS PREMIUM → sending button")
@@ -229,7 +234,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             await update.message.reply_text(
-                "💬 Discussion Club\n\nWelcome to the private AI community 🚀",
+                "💬 Discussion Club\n\n"
+                "Welcome to the private AI community 🚀",
                 reply_markup=keyboard
             )
 
@@ -239,22 +245,29 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.message.reply_text(
                 "🔒 Discussion Club is for Premium users only\n\n"
-                "👉 Upgrade here: https://ai-navigator-frontend.vercel.app/#pricing"
+                "👉 Upgrade here:\n"
+                "https://ai-navigator-frontend.vercel.app/#pricing"
             )
 
         return
 
-    
+
     # =========================
     # OPEN DISCUSSION LINK
     # =========================
-    if "🚀 Open Discussion Club" in text:
+
+    if text == "🚀 Open Discussion Club":
 
         await update.message.reply_text(
-            "👉 https://t.me/+UnxQr7zNlrI5Njhi"
+            '💬 <b>Discussion Club</b>\n\n'
+            'Welcome to the private AI community 🚀\n\n'
+            '<a href="https://t.me/+UnxQr7zNlrI5Njhi">👉 Open Discussion Club</a>',
+            parse_mode="HTML",
+            disable_web_page_preview=True
         )
 
         return
+    
             
     # =========================
     # DEFAULT
