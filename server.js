@@ -322,6 +322,7 @@ if (!deviceId.startsWith("tg_")) {
   `,
   [email, deviceId]
 );
+  }
 
     res.json({
       allowed: true
