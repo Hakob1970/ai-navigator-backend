@@ -87,103 +87,110 @@ app.post(
     let event;
 
     try {
-
       event = stripe.webhooks.constructEvent(
         req.body,
         req.headers["stripe-signature"],
         process.env.STRIPE_WEBHOOK_SECRET
       );
-
     } catch (err) {
-
-      console.error("❌ Webhook error:", err.message);
-
+      console.error("❌ Webhook signature error:", err.message);
       return res.status(400).send();
     }
 
-    if (event.type === "checkout.session.completed") {
+    // ONLY checkout completion
+    if (event.type !== "checkout.session.completed") {
+      return res.json({ received: true });
+    }
 
-      const session = event.data.object;
+    const session = event.data.object;
 
-      const userId = session.metadata?.userId;
+    // IMPORTANT: email = user_id
+    const email =
+      session.metadata?.email ||
+      session.customer_email ||
+      session.customer_details?.email;
 
-      if (!userId) {
+    if (!email) {
+      console.log("❌ No email in session");
+      return res.json({ received: true });
+    }
+
+    try {
+
+      // prevent duplicates (idempotency)
+      const exists = await pool.query(
+        `SELECT 1 FROM payments WHERE session_id = $1`,
+        [session.id]
+      );
+
+      if (exists.rowCount > 0) {
+        console.log("🔁 Duplicate webhook ignored:", session.id);
         return res.json({ received: true });
       }
 
-      try {
+      // get current subscription
+      const sub = await pool.query(
+        `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+        [email]
+      );
 
-        const exists = await pool.query(
-          `
-          SELECT 1
-          FROM payments
-          WHERE session_id = $1
-          `,
-          [session.id]
-        );
+      const now = Date.now();
+      const current = Number(sub.rows[0]?.premium_until || 0);
 
-        if (exists.rowCount === 0) {
+      // extend logic (NO LOSS OF DAYS)
+      const base = current > now ? current : now;
 
-          const premiumUntil =
-            Date.now() + 30 * 24 * 60 * 60 * 1000;
+      // default plan = 30 days
+      const durationDays = 30;
+      const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
-          // user auto-create
-          await pool.query(
-            `
-            INSERT INTO users (user_id)
-            VALUES ($1)
-            ON CONFLICT (user_id)
-            DO NOTHING
-            `,
-            [userId]
-          );
+      const premiumUntil = base + durationMs;
 
-          // subscription
-          await pool.query(
-            `
-            INSERT INTO subscriptions (
-              user_id,
-              premium_until
-            )
-            VALUES ($1, $2)
-            ON CONFLICT (user_id)
-            DO UPDATE SET
-              premium_until = EXCLUDED.premium_until
-            `,
-            [userId, premiumUntil]
-          );
+      // UPSERT subscription
+      await pool.query(
+        `
+        INSERT INTO subscriptions (user_id, premium_until)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id)
+        DO UPDATE SET premium_until = EXCLUDED.premium_until
+        `,
+        [email, premiumUntil]
+      );
 
-          // payment log
-          await pool.query(
-            `
-            INSERT INTO payments (
-              user_id,
-              session_id
-            )
-            VALUES ($1, $2)
-            `,
-            [userId, session.id]
-          );
+      // PAYMENT LOG (FULL)
+      await pool.query(
+        `
+        INSERT INTO payments (
+          user_id,
+          session_id,
+          provider,
+          payment_status,
+          amount,
+          duration_days,
+          premium_until
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `,
+        [
+          email,
+          session.id,
+          "stripe",
+          "paid",
+          session.amount_total || 0,
+          durationDays,
+          premiumUntil
+        ]
+      );
 
-          console.log("✅ PREMIUM ACTIVATED:", userId);
+      console.log("✅ PREMIUM ACTIVATED:", email);
 
-        } else {
-
-          console.log("🔁 Duplicate webhook ignored");
-
-        }
-
-      } catch (dbErr) {
-
-        console.error("❌ DB ERROR:", dbErr);
-
-      }
+    } catch (err) {
+      console.error("❌ DB ERROR:", err);
     }
 
-    res.json({ received: true });
+    return res.json({ received: true });
   }
 );
-
 // =========================
 // NORMAL MIDDLEWARE (AFTER WEBHOOK)
 // =========================
@@ -203,10 +210,9 @@ app.use((req, res, next) => {
 });
 
 
+async function isPremium(email) {
 
-async function isPremium(userId) {
-
-  if (!userId) return false;
+  if (!email) return false;
 
   const result = await pool.query(
     `
@@ -214,15 +220,16 @@ async function isPremium(userId) {
     FROM subscriptions
     WHERE user_id = $1
     `,
-    [userId]
+    [email]
   );
 
   const row = result.rows[0];
 
-  if (!row) return false;
+  if (!row || !row.premium_until) return false;
 
   return Number(row.premium_until) > Date.now();
 }
+
 //---------------------------
  // PREMIUM CHECK
 //--------------------------
@@ -230,9 +237,13 @@ app.get("/api/premium/check", async (req, res) => {
 
   try {
 
-    const { userId } = req.query;
+    const { email } = req.query;
 
-    const premium = await isPremium(userId);
+    if (!email) {
+      return res.json({ premium: false });
+    }
+
+    const premium = await isPremium(email);
 
     res.json({ premium });
 
@@ -245,7 +256,6 @@ app.get("/api/premium/check", async (req, res) => {
     });
   }
 });
-
 
 app.post("/api/device/check", async (req, res) => {
   try {
@@ -392,7 +402,10 @@ app.post("/api/likes", async (req, res) => {
 // =========================
 app.post("/api/telegram/create-link", async (req, res) => {
   try {
-    const { email } = req.body;
+
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
 
     if (!email) {
       return res.status(400).json({
@@ -401,21 +414,21 @@ app.post("/api/telegram/create-link", async (req, res) => {
       });
     }
 
-    const userId = String(email).trim().toLowerCase();
-    const premium = await isPremium(userId);
+    const premium = await isPremium(email);
 
     if (!premium) {
-      return res.status(403).json({
+      return res.json({
         allowed: false,
         redirect: "#pricing"
       });
     }
 
     const botUsername = "hakob_ai_it_bot";
-    const telegramUrl =
-      `https://t.me/${botUsername}?start=${encodeURIComponent(userId)}`;
 
-    res.json({
+    const telegramUrl =
+      `https://t.me/${botUsername}?start=${encodeURIComponent(email)}`;
+
+    return res.json({
       allowed: true,
       url: telegramUrl
     });
@@ -423,14 +436,12 @@ app.post("/api/telegram/create-link", async (req, res) => {
   } catch (err) {
     console.error("❌ TELEGRAM CREATE LINK ERROR:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       allowed: false,
       error: "Server error"
     });
   }
 });
-
-
 // =========================
 // STRIPE CHECKOUT
 // =========================
@@ -438,11 +449,11 @@ app.post("/api/telegram/create-link", async (req, res) => {
 app.post("/api/stripe/create-checkout-session", async (req, res) => {
   try {
 
-    const { userId } = req.body;
+    const { email } = req.body;
 
-    if (!userId) {
+    if (!email) {
       return res.status(400).json({
-        error: "No userId"
+        error: "No email"
       });
     }
 
@@ -467,7 +478,7 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
         "https://ai-navigator-frontend.vercel.app/#pricing",
 
       metadata: {
-        userId
+        email
       }
     });
 
@@ -476,11 +487,7 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
     });
 
   } catch (err) {
-
-    console.error(
-      "❌ STRIPE SESSION ERROR:",
-      err
-    );
+    console.error("❌ STRIPE SESSION ERROR:", err);
 
     return res.status(500).json({
       error: "Stripe error"
@@ -488,25 +495,31 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
   }
 });
 
-
 app.post("/api/user/link-telegram", async (req, res) => {
   try {
-    const { email, telegramId } = req.body;
+
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    const telegramId = String(req.body.telegramId || "").trim();
 
     if (!email || !telegramId) {
       return res.status(400).json({ error: "Missing data" });
     }
 
+    // optional: ensure user exists in subscriptions (source of truth)
     await pool.query(
       `
-      INSERT INTO users (user_id)
-      VALUES ($1)
+      INSERT INTO subscriptions (user_id, premium_until)
+      VALUES ($1, 0)
       ON CONFLICT (user_id)
       DO NOTHING
       `,
       [email]
     );
 
+    // link telegram
     await pool.query(
       `
       INSERT INTO telegram_links (
@@ -523,11 +536,12 @@ app.post("/api/user/link-telegram", async (req, res) => {
 
     console.log("🔗 TELEGRAM LINKED:", email);
 
-    res.json({ success: true });
+    return res.json({ success: true });
 
   } catch (err) {
     console.error("❌ TELEGRAM LINK ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
