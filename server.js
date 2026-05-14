@@ -519,6 +519,17 @@ app.post("/api/user/link-telegram", async (req, res) => {
       [email]
     );
 
+    const exists = await pool.query(
+  `SELECT 1 FROM subscriptions WHERE user_id = $1`,
+  [email]
+);
+
+if (exists.rowCount === 0) {
+  return res.status(404).json({
+    error: "User not found in subscriptions"
+  });
+}
+
     // link telegram
     await pool.query(
       `
