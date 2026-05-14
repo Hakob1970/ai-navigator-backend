@@ -436,27 +436,56 @@ app.post("/api/telegram/create-link", async (req, res) => {
 // =========================
 
 app.post("/api/stripe/create-checkout-session", async (req, res) => {
-  const { userId } = req.body;
+  try {
 
-  if (!userId) return res.status(400).json({ error: "No userId" });
+    const { userId } = req.body;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [{
-      price_data: {
-        currency: "usd",
-        product_data: { name: "AI Premium" },
-        unit_amount: 1000
-      },
-      quantity: 1
-    }],
-success_url: "https://ai-navigator-frontend.vercel.app/?success=true",
-cancel_url: "https://ai-navigator-frontend.vercel.app/#pricing",
-    // 🔥 userId = email
-    metadata: { userId }
-  });
+    if (!userId) {
+      return res.status(400).json({
+        error: "No userId"
+      });
+    }
 
-  res.json({ url: session.url });
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: "AI Premium"
+          },
+          unit_amount: 1000
+        },
+        quantity: 1
+      }],
+
+      success_url:
+        "https://ai-navigator-frontend.vercel.app/?success=true",
+
+      cancel_url:
+        "https://ai-navigator-frontend.vercel.app/#pricing",
+
+      metadata: {
+        userId
+      }
+    });
+
+    return res.json({
+      url: session.url
+    });
+
+  } catch (err) {
+
+    console.error(
+      "❌ STRIPE SESSION ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      error: "Stripe error"
+    });
+  }
 });
 
 
