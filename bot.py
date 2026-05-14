@@ -129,19 +129,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     register_user(user_id, username)
 
-    # 👇 ВАЖНО
     if context.args:
+
         email = context.args[0].strip().lower()
 
-        requests.post(
-            f"{BACKEND}/api/user/link-telegram",
-            json={
-                "email": email,
-                "telegramId": str(user_id)
-            },
-            timeout=3
-        )
+        # basic validation
+        if "@" not in email:
+            await update.message.reply_text("Invalid link")
+            return
 
+        try:
+            requests.post(
+                f"{BACKEND}/api/user/link-telegram",
+                json={
+                    "email": email,
+                    "telegramId": str(user_id)
+                },
+                timeout=3
+            )
+        except Exception as e:
+            print("Telegram link error:", e)
 
     lang = get_lang(user_id)
 
