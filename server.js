@@ -258,10 +258,12 @@ app.post("/api/device/check", async (req, res) => {
       });
     }
 
-    // устройство уже существует
+    // =========================
+    // 1. Проверяем устройство
+    // =========================
     const existing = await pool.query(
       `
-      SELECT *
+      SELECT 1
       FROM user_devices
       WHERE email = $1
       AND device_id = $2
@@ -270,7 +272,7 @@ app.post("/api/device/check", async (req, res) => {
       [email, deviceId]
     );
 
-    if (existing.rows.length > 0) {
+    if (existing.rowCount > 0) {
 
       await pool.query(
         `
@@ -287,44 +289,49 @@ app.post("/api/device/check", async (req, res) => {
       });
     }
 
-    // считаем устройства
-  const countResult = await pool.query(
-  `
-  SELECT COUNT(*)::int AS count
-  FROM user_devices
-  WHERE email = $1
-  AND device_id NOT LIKE 'tg_%'
-  `,
-  [email]
-);
+    // =========================
+    // 2. Считаем устройства
+    // =========================
+    const countResult = await pool.query(
+      `
+      SELECT COUNT(*)::int AS count
+      FROM user_devices
+      WHERE email = $1
+      `,
+      [email]
+    );
 
     const count = countResult.rows[0].count;
 
-    // лимит
+    // =========================
+    // 3. ЛИМИТ 3 УСТРОЙСТВА
+    // =========================
     if (count >= 3) {
       return res.json({
         allowed: false,
-        error: "DEVICE_LIMIT"
+        error: "DEVICE_LIMIT",
+        message: "Лимит исчерпан. У вас уже 3 премиум устройства."
       });
     }
 
-    // добавляем устройство
-if (!deviceId.startsWith("tg_")) {
+    // =========================
+    // 4. ДОБАВЛЯЕМ УСТРОЙСТВО
+    // =========================
+    await pool.query(
+      `
+      INSERT INTO user_devices (
+        email,
+        device_id,
+        last_seen
+      )
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (email, device_id)
+      DO UPDATE SET last_seen = NOW()
+      `,
+      [email, deviceId]
+    );
 
- await pool.query(
-  `
-  INSERT INTO user_devices (
-    email,
-    device_id
-  )
-  VALUES ($1, $2)
-  ON CONFLICT DO NOTHING
-  `,
-  [email, deviceId]
-);
-  }
-
-    res.json({
+    return res.json({
       allowed: true
     });
 
@@ -332,7 +339,7 @@ if (!deviceId.startsWith("tg_")) {
 
     console.error("DEVICE CHECK ERROR:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       allowed: false
     });
   }
