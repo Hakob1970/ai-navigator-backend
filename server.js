@@ -4,19 +4,11 @@ require("dotenv").config();
 
 const express = require("express");
 const { Pool } = require("pg");
-const Stripe = require("stripe");
+const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
 
 const app = express();
-
-
-
-// =========================
-// INIT
-// =========================
-
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // =========================
 // DB (POSTGRES)
@@ -28,169 +20,214 @@ const pool = new Pool({
 });
 
 (async () => {
-  console.log("📦 DB CONNECTING...");
+  try {
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      user_id TEXT PRIMARY KEY
-    );
-  `);
+    console.log("📦 DB CONNECTING...");
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS subscriptions (
-      user_id TEXT PRIMARY KEY,
-      premium_until BIGINT DEFAULT 0
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        user_id TEXT PRIMARY KEY,
+        premium_until BIGINT DEFAULT 0
+      );
+    `);
 
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS telegram_links (
-    user_id TEXT PRIMARY KEY,
-    telegram_id TEXT UNIQUE,
-    linked_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
-  );
-`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS telegram_links (
+        user_id TEXT PRIMARY KEY,
+        telegram_id TEXT UNIQUE,
+        linked_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+      );
+    `);
 
-  await pool.query(`
-  CREATE TABLE IF NOT EXISTS user_devices (
-    id SERIAL PRIMARY KEY,
-    email TEXT,
-    device_id TEXT,
-    last_seen TIMESTAMP DEFAULT NOW()
-  );
-`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_devices (
+        id SERIAL PRIMARY KEY,
+        email TEXT,
+        device_id TEXT,
+        last_seen TIMESTAMP DEFAULT NOW()
+      );
+    `);
 
-  await pool.query(`
-  CREATE UNIQUE INDEX IF NOT EXISTS user_device_unique
-  ON user_devices(email, device_id)
-`);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS user_device_unique
+      ON user_devices(email, device_id)
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS payments (
-      id SERIAL PRIMARY KEY,
-      user_id TEXT,
-      session_id TEXT UNIQUE
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        session_id TEXT UNIQUE
+      );
+    `);
 
-  console.log("✅ DB READY");
+    console.log("✅ DB READY");
+
+  } catch (err) {
+
+    console.error("❌ DB INIT ERROR:", err);
+
+  }
 })();
-
 // =========================
 // STRIPE WEBHOOK
 // =========================
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
+// =========================
+// LEMON SQUEEZY WEBHOOK
+// =========================
 
-    let event;
+app.post("/api/lemon/webhook", async (req, res) => {
 
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        req.headers["stripe-signature"],
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("❌ Webhook signature error:", err.message);
-      return res.status(400).send();
-    }
+  try {
 
-    // ONLY checkout completion
-    if (event.type !== "checkout.session.completed") {
+    const eventName = req.body.meta?.event_name;
+
+    // only successful subscription events
+    if (
+      eventName !== "subscription_created" &&
+      eventName !== "subscription_updated"
+    ) {
       return res.json({ received: true });
     }
 
-    const session = event.data.object;
+    const data = req.body.data?.attributes;
+
+    if (!data) {
+      return res.status(400).json({
+        error: "No data"
+      });
+    }
 
     // IMPORTANT: email = user_id
-    const email =
-      session.metadata?.email ||
-      session.customer_email ||
-      session.customer_details?.email;
+    const email = String(
+      data.user_email || ""
+    ).trim().toLowerCase();
 
     if (!email) {
-      console.log("❌ No email in session");
-      return res.json({ received: true });
+
+      console.log("❌ No email from Lemon");
+
+      return res.json({
+        received: true
+      });
     }
 
-    try {
+    // unique payment/subscription id
+    const paymentId = String(
+      req.body.data?.id || ""
+    );
 
-      // prevent duplicates (idempotency)
-      const exists = await pool.query(
-        `SELECT 1 FROM payments WHERE session_id = $1`,
-        [session.id]
+    // duplicate protection
+    const exists = await pool.query(
+      `
+      SELECT 1
+      FROM payments
+      WHERE session_id = $1
+      `,
+      [paymentId]
+    );
+
+    if (exists.rowCount > 0) {
+
+      console.log(
+        "🔁 Duplicate webhook ignored:",
+        paymentId
       );
 
-      if (exists.rowCount > 0) {
-        console.log("🔁 Duplicate webhook ignored:", session.id);
-        return res.json({ received: true });
-      }
-
-      // get current subscription
-      const sub = await pool.query(
-        `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-        [email]
-      );
-
-      const now = Date.now();
-      const current = Number(sub.rows[0]?.premium_until || 0);
-
-      // extend logic (NO LOSS OF DAYS)
-      const base = current > now ? current : now;
-
-      // default plan = 30 days
-      const durationDays = 30;
-      const durationMs = durationDays * 24 * 60 * 60 * 1000;
-
-      const premiumUntil = base + durationMs;
-
-      // UPSERT subscription
-      await pool.query(
-        `
-        INSERT INTO subscriptions (user_id, premium_until)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id)
-        DO UPDATE SET premium_until = EXCLUDED.premium_until
-        `,
-        [email, premiumUntil]
-      );
-
-      // PAYMENT LOG (FULL)
-      await pool.query(
-        `
-        INSERT INTO payments (
-          user_id,
-          session_id,
-          provider,
-          payment_status,
-          amount,
-          duration_days,
-          premium_until
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
-        `,
-        [
-          email,
-          session.id,
-          "stripe",
-          "paid",
-          session.amount_total || 0,
-          durationDays,
-          premiumUntil
-        ]
-      );
-
-      console.log("✅ PREMIUM ACTIVATED:", email);
-
-    } catch (err) {
-      console.error("❌ DB ERROR:", err);
+      return res.json({
+        received: true
+      });
     }
 
-    return res.json({ received: true });
+    // current subscription
+    const sub = await pool.query(
+      `
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_id = $1
+      `,
+      [email]
+    );
+
+    const now = Date.now();
+
+    const current =
+      Number(sub.rows[0]?.premium_until || 0);
+
+    // preserve remaining days
+    const base =
+      current > now ? current : now;
+
+    // default plan
+    const durationDays = 30;
+
+    const durationMs =
+      durationDays * 24 * 60 * 60 * 1000;
+
+    const premiumUntil =
+      base + durationMs;
+
+    // update subscription
+    await pool.query(
+      `
+      INSERT INTO subscriptions (
+        user_id,
+        premium_until
+      )
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        premium_until = EXCLUDED.premium_until
+      `,
+      [email, premiumUntil]
+    );
+
+    // payment log
+    await pool.query(
+      `
+      INSERT INTO payments (
+        user_id,
+        session_id,
+        provider,
+        payment_status,
+        amount,
+        duration_days,
+        premium_until
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      `,
+      [
+        email,
+        paymentId,
+        "lemon",
+        "paid",
+        Number(data.total || 0),
+        durationDays,
+        premiumUntil
+      ]
+    );
+
+    console.log(
+      "✅ PREMIUM ACTIVATED:",
+      email
+    );
+
+    return res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.error(
+      "❌ LEMON WEBHOOK ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      error: "Server error"
+    });
   }
-);
+});
 // =========================
 // NORMAL MIDDLEWARE (AFTER WEBHOOK)
 // =========================
@@ -257,6 +294,7 @@ app.get("/api/premium/check", async (req, res) => {
   }
 });
 
+
 app.post("/api/device/check", async (req, res) => {
   try {
 
@@ -267,6 +305,15 @@ app.post("/api/device/check", async (req, res) => {
         allowed: false
       });
     }
+
+    const premium = await isPremium(email);
+
+if (!premium) {
+  return res.json({
+    allowed: false,
+    error: "NO_PREMIUM"
+  });
+}
 
     // =========================
     // 1. Проверяем устройство
@@ -358,41 +405,63 @@ app.post("/api/device/check", async (req, res) => {
 
 app.get("/api/likes", async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS site_likes (
-        id TEXT PRIMARY KEY,
-        count BIGINT DEFAULT 0
-      );
+
+    const count = await pool.query(`
+      SELECT COUNT(*) FROM site_likes
     `);
 
-    const result = await pool.query(`
-      INSERT INTO site_likes (id, count)
-      VALUES ('main', 0)
-      ON CONFLICT (id) DO UPDATE SET count = site_likes.count
-      RETURNING count
-    `);
+    return res.json({
+      likes: Number(count.rows[0].count)
+    });
 
-    res.json({ likes: Number(result.rows[0].count) });
   } catch (err) {
     console.error("❌ LIKES GET ERROR:", err);
-    res.status(500).json({ likes: 0 });
+    return res.status(500).json({ likes: 0 });
   }
 });
 
+
 app.post("/api/likes", async (req, res) => {
   try {
-    const result = await pool.query(`
-      INSERT INTO site_likes (id, count)
-      VALUES ('main', 1)
-      ON CONFLICT (id)
-      DO UPDATE SET count = site_likes.count + 1
-      RETURNING count
+
+    const { email, deviceId } = req.body;
+
+    if (!email || !deviceId) {
+      return res.status(400).json({
+        error: "Missing data"
+      });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    // =========================
+    // try insert like (only once)
+    // =========================
+    const result = await pool.query(
+      `
+      INSERT INTO site_likes (email, device_id)
+      VALUES ($1, $2)
+      ON CONFLICT (email, device_id) DO NOTHING
+      RETURNING id
+      `,
+      [cleanEmail, deviceId]
+    );
+
+    // =========================
+    // count total likes
+    // =========================
+    const count = await pool.query(`
+      SELECT COUNT(*) FROM site_likes
     `);
 
-    res.json({ likes: Number(result.rows[0].count) });
+    return res.json({
+      likes: Number(count.rows[0].count),
+      added: result.rowCount > 0
+    });
+
   } catch (err) {
-    console.error("❌ LIKES POST ERROR:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ LIKES ERROR:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -446,10 +515,12 @@ app.post("/api/telegram/create-link", async (req, res) => {
 // STRIPE CHECKOUT
 // =========================
 
-app.post("/api/stripe/create-checkout-session", async (req, res) => {
+app.post("/api/lemon/create-checkout", async (req, res) => {
   try {
 
-    const { email } = req.body;
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
 
     if (!email) {
       return res.status(400).json({
@@ -457,43 +528,36 @@ app.post("/api/stripe/create-checkout-session", async (req, res) => {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+    // =========================
+    // LEMON CHECKOUT URL
+    // =========================
+    const productCheckoutUrl =
+      process.env.LEMON_CHECKOUT_URL;
 
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "AI Premium"
-          },
-          unit_amount: 1000
-        },
-        quantity: 1
-      }],
+    if (!productCheckoutUrl) {
+      return res.status(500).json({
+        error: "Missing Lemon checkout URL"
+      });
+    }
 
-      success_url:
-        "https://ai-navigator-frontend.vercel.app/?success=true",
-
-      cancel_url:
-        "https://ai-navigator-frontend.vercel.app/#pricing",
-
-      metadata: {
-        email
-      }
-    });
+    // optional: attach user identity
+    const url =
+      `${productCheckoutUrl}?checkout[email]=${encodeURIComponent(email)}`;
 
     return res.json({
-      url: session.url
+      url
     });
 
   } catch (err) {
-    console.error("❌ STRIPE SESSION ERROR:", err);
+
+    console.error("❌ LEMON CHECKOUT ERROR:", err);
 
     return res.status(500).json({
-      error: "Stripe error"
+      error: "Lemon error"
     });
   }
 });
+
 
 app.post("/api/user/link-telegram", async (req, res) => {
   try {
@@ -508,27 +572,17 @@ app.post("/api/user/link-telegram", async (req, res) => {
       return res.status(400).json({ error: "Missing data" });
     }
 
-    // optional: ensure user exists in subscriptions (source of truth)
-    await pool.query(
-      `
-      INSERT INTO subscriptions (user_id, premium_until)
-      VALUES ($1, 0)
-      ON CONFLICT (user_id)
-      DO NOTHING
-      `,
+    // check user exists (source of truth)
+    const exists = await pool.query(
+      `SELECT 1 FROM subscriptions WHERE user_id = $1`,
       [email]
     );
 
-    const exists = await pool.query(
-  `SELECT 1 FROM subscriptions WHERE user_id = $1`,
-  [email]
-);
-
-if (exists.rowCount === 0) {
-  return res.status(404).json({
-    error: "User not found in subscriptions"
-  });
-}
+    if (exists.rowCount === 0) {
+      return res.status(404).json({
+        error: "User not found in subscriptions"
+      });
+    }
 
     // link telegram
     await pool.query(
@@ -555,6 +609,7 @@ if (exists.rowCount === 0) {
     return res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 app.get("/api/user/get-email", async (req, res) => {
@@ -664,14 +719,6 @@ if (existingOldUser.rowCount === 0) {
       [newUserId, oldUserId]
     );
 
-    await client.query(
-      `
-      DELETE FROM users
-      WHERE user_id = $1
-      `,
-      [oldUserId]
-    );
-
     await client.query("COMMIT");
 
     console.log("✅ EMAIL CHANGED:", oldUserId, "=>", newUserId);
@@ -705,26 +752,40 @@ if (existingOldUser.rowCount === 0) {
 app.get("/api/admin/stats", async (req, res) => {
 
   const key = req.headers["x-admin-key"];
+
   if (key !== process.env.ADMIN_SECRET) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const users = await pool.query(`SELECT COUNT(*) FROM users`);
-const premium = await pool.query(
-  `
-  SELECT COUNT(*)
-  FROM subscriptions
-  WHERE premium_until > $1
-  `,
-  [Date.now()]
-);
-  const payments = await pool.query(`SELECT COUNT(*) FROM payments`);
+  try {
 
-  res.json({
-    users: parseInt(users.rows[0].count),
-    premium: parseInt(premium.rows[0].count),
-    payments: parseInt(payments.rows[0].count)
-  });
+    const users = await pool.query(`
+      SELECT COUNT(*) FROM subscriptions
+    `);
+
+    const premium = await pool.query(
+      `
+      SELECT COUNT(*)
+      FROM subscriptions
+      WHERE premium_until > $1
+      `,
+      [Date.now()]
+    );
+
+    const payments = await pool.query(`
+      SELECT COUNT(*) FROM payments
+    `);
+
+    return res.json({
+      users: Number(users.rows[0].count),
+      premium: Number(premium.rows[0].count),
+      payments: Number(payments.rows[0].count)
+    });
+
+  } catch (err) {
+    console.error("❌ ADMIN STATS ERROR:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
 });
 
 
