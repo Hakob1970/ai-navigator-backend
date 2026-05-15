@@ -16,7 +16,6 @@ ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
-email_cache = {}
 
 def link_telegram(email, telegram_id):
     try:
@@ -90,7 +89,7 @@ def is_premium(email):
     try:
         res = requests.get(
             f"{BACKEND}/api/premium/check",
-            params={"userId": email},
+            params={"email": email},
             timeout=3
         )
         return res.json().get("premium", False)
@@ -189,56 +188,55 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     # DISCUSSION CLUB
     # =========================
-
     if text == "💬 Discussion Club":
 
-        email = None
-
         try:
+            # 1. берем email по telegramId
             res = requests.get(
                 f"{BACKEND}/api/user/get-email",
                 params={"telegramId": str(user_id)},
                 timeout=3
             )
             email = res.json().get("email")
-        except:
-            email = None
 
-        premium = False
-
-        if email:
-            try:
-                res = requests.get(
-                    f"{BACKEND}/api/premium/check",
-                    params={"userId": email},
-                    timeout=3
+            if not email:
+                await update.message.reply_text(
+                    "🔒 Discussion Club is for Premium users only\n\n"
+                    "👉 Upgrade here:\n"
+                    "https://ai-navigator-frontend.vercel.app/#pricing"
                 )
-                premium = res.json().get("premium", False)
-            except:
-                premium = False
+                return
 
-        # =========================
-        # PREMIUM USER
-        # =========================
-        if premium:
-
-            await update.message.reply_text(
-                "💬 <b>Discussion Club</b>\n\n"
-                "Welcome to the private AI community 🚀\n\n"
-                "<a href='https://t.me/+UnxQr7zNlrI5Njhi'>👉 Open Discussion Club</a>",
-                parse_mode="HTML",
-                disable_web_page_preview=True
+            # 2. проверяем premium ЧЕРЕЗ EMAIL
+            res = requests.get(
+                f"{BACKEND}/api/premium/check",
+                params={"email": email},
+                timeout=3
             )
 
-        # =========================
-        # NON-PREMIUM
-        # =========================
-        else:
+            premium = res.json().get("premium", False)
+
+            # 3. доступ
+            if premium:
+                await update.message.reply_text(
+                    "💬 <b>Discussion Club</b>\n\n"
+                    "Welcome to the private AI community 🚀\n\n"
+                    "<a href='https://t.me/+UnxQr7zNlrI5Njhi'>👉 Open Discussion Club</a>",
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
+                )
+            else:
+                await update.message.reply_text(
+                    "🔒 Discussion Club is for Premium users only\n\n"
+                    "👉 Upgrade here:\n"
+                    "https://ai-navigator-frontend.vercel.app/#pricing"
+                )
+
+        except Exception as e:
+            print("DISCUSSION CLUB ERROR:", e)
 
             await update.message.reply_text(
-                "🔒 Discussion Club is for Premium users only\n\n"
-                "👉 Upgrade here:\n"
-                "https://ai-navigator-frontend.vercel.app/#pricing"
+                "⚠️ Server error. Try again later."
             )
 
         return
