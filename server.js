@@ -254,6 +254,13 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post("/api/lemon/webhook", (req, res) => {
+  console.log("🔥 LEMON WEBHOOK HIT");
+  console.log("BODY:", req.body);
+
+  res.sendStatus(200);
+});
+
 
 async function isPremium(email) {
 
