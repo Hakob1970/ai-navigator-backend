@@ -69,189 +69,135 @@ const pool = new Pool({
 
   }
 })();
-// =========================
-// STRIPE WEBHOOK
-// =========================
+
 // =========================
 // LEMON SQUEEZY WEBHOOK
 // =========================
+app.post(
+  "/api/lemon/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      let body = {};
 
-app.post("/api/lemon/webhook", async (req, res) => {
+      // parse safely
+      if (req.body) {
+        body = JSON.parse(req.body.toString());
+      }
 
-  try {
+      console.log("🔥 LEMON WEBHOOK HIT");
+      console.log("BODY:", body);
 
-    const eventName = req.body.meta?.event_name;
+      const eventName = body?.meta?.event_name;
 
-    // only successful subscription events
-    if (
-      eventName !== "subscription_created" &&
-      eventName !== "subscription_updated"
-    ) {
-      return res.json({ received: true });
-    }
+      // only subscription events
+      if (
+        eventName !== "subscription_created" &&
+        eventName !== "subscription_updated"
+      ) {
+        return res.json({ received: true });
+      }
 
-    const data = req.body.data?.attributes;
+      const data = body?.data?.attributes;
 
-    if (!data) {
-      return res.status(400).json({
-        error: "No data"
-      });
-    }
+      if (!data) {
+        return res.status(400).json({ error: "No data" });
+      }
 
-    // IMPORTANT: email = user_id
-    const email = String(
-      data.user_email || ""
-    ).trim().toLowerCase();
+      // email = user_id
+      const email = String(data.user_email || "").trim().toLowerCase();
 
-    if (!email) {
+      if (!email) {
+        console.log("❌ No email from Lemon");
+        return res.json({ received: true });
+      }
 
-      console.log("❌ No email from Lemon");
+      const paymentId = String(body?.data?.id || "");
 
-      return res.json({
-        received: true
-      });
-    }
-
-    // unique payment/subscription id
-    const paymentId = String(
-      req.body.data?.id || ""
-    );
-
-    // duplicate protection
-    const exists = await pool.query(
-      `
-      SELECT 1
-      FROM payments
-      WHERE session_id = $1
-      `,
-      [paymentId]
-    );
-
-    if (exists.rowCount > 0) {
-
-      console.log(
-        "🔁 Duplicate webhook ignored:",
-        paymentId
+      // duplicate check
+      const exists = await pool.query(
+        `SELECT 1 FROM payments WHERE session_id = $1`,
+        [paymentId]
       );
 
-      return res.json({
-        received: true
-      });
+      if (exists.rowCount > 0) {
+        console.log("🔁 Duplicate webhook ignored:", paymentId);
+        return res.json({ received: true });
+      }
+
+      const sub = await pool.query(
+        `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+        [email]
+      );
+
+      const now = Date.now();
+      const current = Number(sub.rows[0]?.premium_until || 0);
+      const base = current > now ? current : now;
+
+      const VARIANT_TO_DAYS = {
+        variant_30: 30,
+        variant_60: 60,
+        variant_120: 120,
+        variant_365: 365
+      };
+
+      const variantId =
+        data.variant_id ||
+        data.variant ||
+        data.plan_id ||
+        "variant_30";
+
+      const durationDays = VARIANT_TO_DAYS[String(variantId)] || 30;
+      const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
+      const premiumUntil = base + durationMs;
+
+      await pool.query(
+        `INSERT INTO subscriptions (user_id, premium_until)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id)
+         DO UPDATE SET premium_until = EXCLUDED.premium_until`,
+        [email, premiumUntil]
+      );
+
+      await pool.query(
+        `INSERT INTO payments (
+          user_id, session_id, provider,
+          payment_status, amount, duration_days, premium_until
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [
+          email,
+          paymentId,
+          "lemon",
+          "paid",
+          Number(data.total || 0),
+          durationDays,
+          premiumUntil
+        ]
+      );
+
+      console.log("✅ PREMIUM ACTIVATED:", email);
+
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("❌ LEMON WEBHOOK ERROR:", err);
+      return res.status(200).json({ received: true });
     }
-
-    // current subscription
-    const sub = await pool.query(
-      `
-      SELECT premium_until
-      FROM subscriptions
-      WHERE user_id = $1
-      `,
-      [email]
-    );
-
-    const now = Date.now();
-
-    const current =
-      Number(sub.rows[0]?.premium_until || 0);
-
-    // preserve remaining days
-    const base =
-      current > now ? current : now;
-
-    // default plan
-   const VARIANT_TO_DAYS = {
-  "variant_30": 30,
-  "variant_60": 60,
-  "variant_120": 120,
-  "variant_365": 365
-};
-
-  const variantId =
-  data.variant_id ||
-  data.variant ||
-  data.plan_id ||
-  "variant_30";  
-
-  const safeVariantId = String(variantId);  
-
-const durationDays = VARIANT_TO_DAYS[safeVariantId] || 30;
-
-const durationMs = durationDays * 24 * 60 * 60 * 1000;
-const premiumUntil = base + durationMs;
-
-    // update subscription
-    await pool.query(
-      `
-      INSERT INTO subscriptions (
-        user_id,
-        premium_until
-      )
-      VALUES ($1, $2)
-      ON CONFLICT (user_id)
-      DO UPDATE SET
-        premium_until = EXCLUDED.premium_until
-      `,
-      [email, premiumUntil]
-    );
-
-    // payment log
-    await pool.query(
-      `
-      INSERT INTO payments (
-        user_id,
-        session_id,
-        provider,
-        payment_status,
-        amount,
-        duration_days,
-        premium_until
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      `,
-      [
-        email,
-        paymentId,
-        "lemon",
-        "paid",
-        Number(data.total || 0),
-        durationDays,
-        premiumUntil
-      ]
-    );
-
-    console.log(
-      "✅ PREMIUM ACTIVATED:",
-      email
-    );
-
-    return res.json({
-      success: true
-    });
-
-  } catch (err) {
-
-    console.error(
-      "❌ LEMON WEBHOOK ERROR:",
-      err
-    );
-
-    return res.status(500).json({
-      error: "Server error"
-    });
   }
-});
+);
+
 // =========================
 // NORMAL MIDDLEWARE (AFTER WEBHOOK)
 // =========================
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-
 app.use(cors({
   origin: [
     "https://ai-navigator-frontend.vercel.app",
     "http://localhost:5500"
   ]
 }));
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use((req, res, next) => {
   console.log("🌐 REQUEST:", req.method, req.url);
@@ -261,13 +207,6 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   console.log("🔥 INCOMING:", req.method, req.url);
   next();
-});
-
-app.post("/api/lemon/webhook", (req, res) => {
-  console.log("🔥 LEMON WEBHOOK HIT");
-  console.log("BODY:", req.body);
-
-  res.sendStatus(200);
 });
 
 
