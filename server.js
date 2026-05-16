@@ -159,10 +159,18 @@ app.post("/api/lemon/webhook", async (req, res) => {
       current > now ? current : now;
 
     // default plan
-    const durationDays = 30;
+   const VARIANT_TO_DAYS = {
+  "variant_30": 30,
+  "variant_60": 60,
+  "variant_120": 120,
+  "variant_365": 365
+};
 
-    const durationMs =
-      durationDays * 24 * 60 * 60 * 1000;
+const durationDays = VARIANT_TO_DAYS[variantId] || 30;
+
+const durationMs = durationDays * 24 * 60 * 60 * 1000;
+const premiumUntil = base + durationMs;
+    
 
     const premiumUntil =
       base + durationMs;
