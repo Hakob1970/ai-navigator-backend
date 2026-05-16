@@ -312,16 +312,18 @@ if (!premium) {
     // =========================
     // 2. Считаем устройства
     // =========================
-    const countResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM user_devices
-      WHERE email = $1
-      `,
-      [email]
-    );
+  const debug = await pool.query(
+  `SELECT email, device_id, last_seen FROM user_devices WHERE email = $1`,
+  [email]
+);
+   const devices = debug.rows; 
 
-    const count = countResult.rows[0].count;
+console.log("RAW DEVICES:", debug.rows);
+console.log("COUNT:", debug.rows.length);
+
+   if (devices.length >= 3) {
+  // block
+}
 
     // =========================
     // 3. ЛИМИТ 3 УСТРОЙСТВА
