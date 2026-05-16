@@ -751,7 +751,7 @@ if (existingOldUser.rowCount === 0) {
 
 app.get("/api/admin/stats", async (req, res) => {
 
-  const key = req.headers["x-admin-key"];
+  console.log("🔥 ABOUT TO LISTEN");
 
   if (key !== process.env.ADMIN_SECRET) {
     return res.status(403).json({ error: "Forbidden" });
@@ -791,7 +791,7 @@ app.get("/api/admin/stats", async (req, res) => {
 
 // =========================
 const PORT = process.env.PORT || 3000;
-
+console.log("🔥 ABOUT TO LISTEN");
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 SERVER RUNNING ON", PORT);
 });
