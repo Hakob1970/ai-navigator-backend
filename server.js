@@ -166,14 +166,18 @@ app.post("/api/lemon/webhook", async (req, res) => {
   "variant_365": 365
 };
 
-const durationDays = VARIANT_TO_DAYS[variantId] || 30;
+  const variantId =
+  data.variant_id ||
+  data.variant ||
+  data.plan_id ||
+  "variant_30";  
+
+  const safeVariantId = String(variantId);  
+
+const durationDays = VARIANT_TO_DAYS[safeVariantId] || 30;
 
 const durationMs = durationDays * 24 * 60 * 60 * 1000;
 const premiumUntil = base + durationMs;
-    
-
-    const premiumUntil =
-      base + durationMs;
 
     // update subscription
     await pool.query(
@@ -770,14 +774,12 @@ if (existingOldUser.rowCount === 0) {
 // =========================
 
 app.get("/api/admin/stats", async (req, res) => {
-
-  console.log("🔥 ABOUT TO LISTEN");
-
-  if (key !== process.env.ADMIN_SECRET) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-
   try {
+    const key = req.headers["x-admin-key"] || req.query.key;
+
+    if (!key || key !== process.env.ADMIN_SECRET) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const users = await pool.query(`
       SELECT COUNT(*) FROM subscriptions
