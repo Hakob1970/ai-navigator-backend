@@ -287,19 +287,17 @@ app.post("/api/device/check", async (req, res) => {
     const { email, deviceId } = req.body;
 
     if (!email || !deviceId) {
-      return res.json({
-        allowed: false
-      });
+      return res.json({ allowed: false });
     }
 
     const premium = await isPremium(email);
 
-if (!premium) {
-  return res.json({
-    allowed: false,
-    error: "NO_PREMIUM"
-  });
-}
+    if (!premium) {
+      return res.json({
+        allowed: false,
+        error: "NO_PREMIUM"
+      });
+    }
 
     // =========================
     // 1. Проверяем устройство
@@ -327,46 +325,35 @@ if (!premium) {
         [email, deviceId]
       );
 
-      return res.json({
-        allowed: true
-      });
+      return res.json({ allowed: true });
     }
 
     // =========================
-    // 2. Считаем устройства
+    // 2. СЧИТАЕМ АКТИВНЫЕ УСТРОЙСТВА
     // =========================
- const debug = await pool.query(
-  `
-  SELECT email, device_id, last_seen
-  FROM user_devices
-  WHERE email = $1
-  `,
-  [email]
-);
+    const devices = await pool.query(
+      `
+      SELECT *
+      FROM user_devices
+      WHERE email = $1
+      AND last_seen > NOW() - INTERVAL '30 days'
+      `,
+      [email]
+    );
 
-const devices = debug.rows;
+    console.log("COUNT:", devices.rows.length);
 
-console.log("RAW DEVICES:", devices);
-console.log("COUNT:", devices.length);
+    // =========================
+    // 3. ЛИМИТ 3 УСТРОЙСТВА
+    // =========================
+    if (devices.rows.length >= 3) {
+      return res.json({
+        allowed: false,
+        error: "DEVICE_LIMIT",
+        message: "Лимит исчерпан. У вас уже 3 премиум устройства."
+      });
+    }
 
-// =========================
-// 3. ЛИМИТ 3 УСТРОЙСТВА
-// =========================
-const devices = await pool.query(`
-  SELECT *
-  FROM user_devices
-  WHERE email = $1
-  AND last_seen > NOW() - INTERVAL '30 days'
-`, [email]);
-
-    
-if (devices.length >= 3) {
-  return res.json({
-    allowed: false,
-    error: "DEVICE_LIMIT",
-    message: "Лимит исчерпан. У вас уже 3 премиум устройства."
-  });
-}
     // =========================
     // 4. ДОБАВЛЯЕМ УСТРОЙСТВО
     // =========================
@@ -384,12 +371,9 @@ if (devices.length >= 3) {
       [email, deviceId]
     );
 
-    return res.json({
-      allowed: true
-    });
+    return res.json({ allowed: true });
 
   } catch (err) {
-
     console.error("DEVICE CHECK ERROR:", err);
 
     return res.status(500).json({
@@ -397,6 +381,7 @@ if (devices.length >= 3) {
     });
   }
 });
+
 
 
 app.get("/api/likes", async (req, res) => {
