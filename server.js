@@ -63,6 +63,13 @@ const pool = new Pool({
       );
     `);
 
+    await pool.query(`
+  DELETE FROM user_devices
+  WHERE last_seen < NOW() - INTERVAL '365 days'
+`);
+
+console.log("🧹 OLD DEVICES CLEANED");
+
     console.log("✅ DB READY");
 
   } catch (err) {
@@ -345,6 +352,14 @@ console.log("COUNT:", devices.length);
 // =========================
 // 3. ЛИМИТ 3 УСТРОЙСТВА
 // =========================
+const devices = await pool.query(`
+  SELECT *
+  FROM user_devices
+  WHERE email = $1
+  AND last_seen > NOW() - INTERVAL '30 days'
+`, [email]);
+
+    
 if (devices.length >= 3) {
   return res.json({
     allowed: false,
