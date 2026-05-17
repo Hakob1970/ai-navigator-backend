@@ -8,6 +8,8 @@ const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
 
+console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
+
 const app = express();
 
 // =========================
