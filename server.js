@@ -219,14 +219,13 @@ app.use((req, res, next) => {
 });
 
 async function isPremium(email) {
-
   if (!email) return false;
 
   const result = await pool.query(
     `
     SELECT premium_until
     FROM subscriptions
-    WHERE user_id = $1
+    WHERE email = $1
     `,
     [email]
   );
@@ -240,7 +239,6 @@ async function isPremium(email) {
 
   return end > now;
 }
-
 
 //---------------------------
  // PREMIUM CHECK
@@ -503,7 +501,8 @@ app.post("/api/telegram/create-link", async (req, res) => {
 
     const premium = await isPremium(email);
 
- if (!premium) {
+if (!premium) {
+  console.log("BLOCKED USER:", email);
   return res.json({
     allowed: false,
     url: null,
