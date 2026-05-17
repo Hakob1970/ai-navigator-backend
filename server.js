@@ -89,17 +89,15 @@ app.post(
     try {
       let body = {};
 
-      // parse safely
       if (req.body) {
         body = JSON.parse(req.body.toString());
       }
 
       console.log("🔥 LEMON WEBHOOK HIT");
-      console.log("BODY:", body);
+      console.log("EVENT:", body?.meta?.event_name);
 
       const eventName = body?.meta?.event_name;
 
-      // only subscription events
       if (
         eventName !== "subscription_created" &&
         eventName !== "subscription_updated"
@@ -108,13 +106,13 @@ app.post(
       }
 
       const data = body?.data?.attributes;
-
       if (!data) {
         return res.status(400).json({ error: "No data" });
       }
 
-      // email = user_id
-      const email = String(data.user_email || "").trim().toLowerCase();
+      const email = String(data.user_email || "")
+        .trim()
+        .toLowerCase();
 
       if (!email) {
         console.log("❌ No email from Lemon");
@@ -123,7 +121,7 @@ app.post(
 
       const paymentId = String(body?.data?.id || "");
 
-      // duplicate check
+      // 🔁 prevent duplicates
       const exists = await pool.query(
         `SELECT 1 FROM payments WHERE session_id = $1`,
         [paymentId]
@@ -134,6 +132,9 @@ app.post(
         return res.json({ received: true });
       }
 
+      // =========================
+      // GET SUBSCRIPTION
+      // =========================
       const sub = await pool.query(
         `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
         [email]
@@ -141,8 +142,10 @@ app.post(
 
       const now = Date.now();
       const current = Number(sub.rows[0]?.premium_until || 0);
-      const base = current > now ? current : now;
 
+      // =========================
+      // PLAN DURATION
+      // =========================
       const VARIANT_TO_DAYS = {
         variant_30: 30,
         variant_60: 60,
@@ -159,21 +162,52 @@ app.post(
       const durationDays = VARIANT_TO_DAYS[String(variantId)] || 30;
       const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
-      const premiumUntil = base + durationMs;
+      // =========================
+      // SAFE LOGIC (NO STACKING BUG)
+      // =========================
 
+      // ❗ FIX: always reset or extend safely
+      const base = Math.max(now, current);
+      let premiumUntil = base + durationMs;
+
+      // =========================
+      // HARD LIMIT: max 1 year
+      // =========================
+      const MAX_YEAR = 365 * 24 * 60 * 60 * 1000;
+      const maxAllowed = now + MAX_YEAR;
+
+      if (premiumUntil > maxAllowed) {
+        premiumUntil = maxAllowed;
+      }
+
+      // =========================
+      // SAVE SUBSCRIPTION
+      // =========================
       await pool.query(
-        `INSERT INTO subscriptions (user_id, premium_until)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id)
-         DO UPDATE SET premium_until = EXCLUDED.premium_until`,
+        `
+        INSERT INTO subscriptions (user_id, premium_until)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id)
+        DO UPDATE SET premium_until = EXCLUDED.premium_until
+        `,
         [email, premiumUntil]
       );
 
+      // =========================
+      // SAVE PAYMENT
+      // =========================
       await pool.query(
-        `INSERT INTO payments (
-          user_id, session_id, provider,
-          payment_status, amount, duration_days, premium_until
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        `
+        INSERT INTO payments (
+          user_id,
+          session_id,
+          provider,
+          payment_status,
+          amount,
+          duration_days,
+          premium_until
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `,
         [
           email,
           paymentId,
@@ -185,7 +219,7 @@ app.post(
         ]
       );
 
-      console.log("✅ PREMIUM ACTIVATED:", email);
+      console.log("✅ PREMIUM ACTIVATED:", email, "UNTIL:", premiumUntil);
 
       return res.json({ success: true });
     } catch (err) {
@@ -194,7 +228,6 @@ app.post(
     }
   }
 );
-
 // =========================
 // NORMAL MIDDLEWARE (AFTER WEBHOOK)
 // =========================
