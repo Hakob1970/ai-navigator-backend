@@ -236,7 +236,14 @@ async function isPremium(email) {
     new Date(row.premium_until).getTime() > Date.now()
   );
 
-  return new Date(row.premium_until).getTime() > Date.now();
+  const ts = Number(String(row.premium_until).trim());
+
+const isValid = !isNaN(ts) && ts > Date.now();
+
+console.log("PARSED TS:", ts);
+console.log("IS VALID:", isValid);
+
+return isValid;
 }
 
 //---------------------------
