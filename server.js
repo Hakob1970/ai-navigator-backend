@@ -225,7 +225,7 @@ async function isPremium(email) {
     `
     SELECT premium_until
     FROM subscriptions
-    WHERE email = $1
+    WHERE user_id = $1
     `,
     [email]
   );
@@ -234,10 +234,7 @@ async function isPremium(email) {
 
   if (!row || !row.premium_until) return false;
 
-  const now = Date.now();
-  const end = new Date(row.premium_until).getTime();
-
-  return end > now;
+  return Number(row.premium_until) > Date.now();
 }
 
 //---------------------------
