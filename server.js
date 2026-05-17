@@ -406,12 +406,13 @@ app.post("/api/device/check", async (req, res) => {
     return res.json({ allowed: true });
 
   } catch (err) {
-    console.error("DEVICE CHECK ERROR:", err);
+  console.error("DEVICE ERROR FULL:", err);
+  console.error(err.stack);
 
-    return res.status(500).json({
-      allowed: false
-    });
-  }
+  return res.status(500).json({
+    error: "DEVICE_CHECK_FAILED"
+  });
+}
 });
 
 
@@ -518,13 +519,14 @@ if (!premium) {
     });
 
   } catch (err) {
-    console.error("❌ TELEGRAM CREATE LINK ERROR:", err);
+  console.error("TELEGRAM ERROR FULL:", err);
+  console.error(err.stack);
 
-    return res.status(500).json({
-      allowed: false,
-      error: "Server error"
-    });
-  }
+  return res.status(500).json({
+    allowed: false,
+    error: err.message
+  });
+}
 });
 // =========================
 // STRIPE CHECKOUT
