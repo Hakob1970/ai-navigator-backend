@@ -227,7 +227,14 @@ async function isPremium(email) {
 
   if (!row || !row.premium_until) return false;
 
-  return Number(row.premium_until) > Date.now();
+    console.log("PREMIUM UNTIL:", row.premium_until);
+  console.log("NOW:", Date.now());
+  console.log(
+    "CHECK:",
+    new Date(row.premium_until).getTime() > Date.now()
+  );
+
+  return new Date(row.premium_until).getTime() > Date.now();
 }
 
 //---------------------------
