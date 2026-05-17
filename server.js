@@ -218,7 +218,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 async function isPremium(email) {
 
   if (!email) return false;
@@ -236,22 +235,12 @@ async function isPremium(email) {
 
   if (!row || !row.premium_until) return false;
 
-    console.log("PREMIUM UNTIL:", row.premium_until);
-  console.log("NOW:", Date.now());
-  console.log(
-    "CHECK:",
-    new Date(row.premium_until).getTime() > Date.now()
-  );
+  const now = Date.now();
+  const end = new Date(row.premium_until).getTime();
 
-  const ts = Number(String(row.premium_until).trim());
-
-const isValid = !isNaN(ts) && ts > Date.now();
-
-console.log("PARSED TS:", ts);
-console.log("IS VALID:", isValid);
-
-return isValid;
+  return end > now;
 }
+
 
 //---------------------------
  // PREMIUM CHECK
@@ -263,19 +252,67 @@ app.get("/api/premium/check", async (req, res) => {
     const { email } = req.query;
 
     if (!email) {
-      return res.json({ premium: false });
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "NO_EMAIL"
+      });
     }
 
-    const premium = await isPremium(email);
+    const result = await pool.query(
+      `
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_id = $1
+      `,
+      [email]
+    );
 
-    res.json({ premium });
+    const row = result.rows[0];
+
+    if (!row || !row.premium_until) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "NO_PREMIUM"
+      });
+    }
+
+    const now = new Date();
+    const end = new Date(row.premium_until);
+
+    const diffMs = end - now;
+    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (daysLeft <= 0) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "EXPIRED"
+      });
+    }
+
+    let warning = null;
+
+    if (daysLeft <= 1) warning = "CRITICAL";
+    else if (daysLeft <= 3) warning = "WARNING";
+    else if (daysLeft <= 7) warning = "INFO";
+
+    return res.json({
+      premium: true,
+      daysLeft,
+      premiumUntil: row.premium_until,
+      warning
+    });
 
   } catch (err) {
 
     console.error("❌ PREMIUM CHECK ERROR:", err);
 
-    res.status(500).json({
-      premium: false
+    return res.status(500).json({
+      premium: false,
+      daysLeft: 0,
+      warning: "SERVER_ERROR"
     });
   }
 });
