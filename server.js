@@ -312,30 +312,30 @@ if (!premium) {
     // =========================
     // 2. Считаем устройства
     // =========================
-  const debug = await pool.query(
-  `SELECT email, device_id, last_seen FROM user_devices WHERE email = $1`,
+ const debug = await pool.query(
+  `
+  SELECT email, device_id, last_seen
+  FROM user_devices
+  WHERE email = $1
+  `,
   [email]
 );
-   const devices = debug.rows; 
 
-console.log("RAW DEVICES:", debug.rows);
-console.log("COUNT:", debug.rows.length);
+const devices = debug.rows;
 
-   if (devices.length >= 3) {
-  // block
+console.log("RAW DEVICES:", devices);
+console.log("COUNT:", devices.length);
+
+// =========================
+// 3. ЛИМИТ 3 УСТРОЙСТВА
+// =========================
+if (devices.length >= 3) {
+  return res.json({
+    allowed: false,
+    error: "DEVICE_LIMIT",
+    message: "Лимит исчерпан. У вас уже 3 премиум устройства."
+  });
 }
-
-    // =========================
-    // 3. ЛИМИТ 3 УСТРОЙСТВА
-    // =========================
-    if (count >= 3) {
-      return res.json({
-        allowed: false,
-        error: "DEVICE_LIMIT",
-        message: "Лимит исчерпан. У вас уже 3 премиум устройства."
-      });
-    }
-
     // =========================
     // 4. ДОБАВЛЯЕМ УСТРОЙСТВО
     // =========================
