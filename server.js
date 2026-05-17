@@ -504,40 +504,20 @@ app.post("/api/lemon/create-checkout", async (req, res) => {
       .toLowerCase();
 
     if (!email) {
-      return res.status(400).json({
-        error: "No email"
-      });
+      return res.status(400).json({ error: "No email" });
     }
 
-    // =========================
-    // LEMON CHECKOUT URL
-    // =========================
-    const productCheckoutUrl =
-      process.env.LEMON_CHECKOUT_URL;
-
-    if (!productCheckoutUrl) {
-      return res.status(500).json({
-        error: "Missing Lemon checkout URL"
-      });
-    }
-
-    // optional: attach user identity
     const url =
-      `${productCheckoutUrl}?checkout[email]=${encodeURIComponent(email)}`;
+      `https://ai-navigator.lemonsqueezy.com/checkout/buy/8abbfae0-58cc-4ad9-b2eb-704294536514?checkout[email]=${encodeURIComponent(email)}`;
 
-    return res.json({
-      url
-    });
+    return res.json({ url });
 
   } catch (err) {
-
-    console.error("❌ LEMON CHECKOUT ERROR:", err);
-
-    return res.status(500).json({
-      error: "Lemon error"
-    });
+    console.error("LEMON ERROR:", err);
+    return res.status(500).json({ error: "Lemon error" });
   }
 });
+
 
 
 app.post("/api/user/link-telegram", async (req, res) => {
