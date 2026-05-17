@@ -503,12 +503,13 @@ app.post("/api/telegram/create-link", async (req, res) => {
 
     const premium = await isPremium(email);
 
-    if (!premium) {
-      return res.json({
-        allowed: false,
-        redirect: "#pricing"
-      });
-    }
+ if (!premium) {
+  return res.json({
+    allowed: false,
+    url: null,
+    error: "NO_PREMIUM"
+  });
+}
 
     const botUsername = "hakob_ai_it_bot";
 
