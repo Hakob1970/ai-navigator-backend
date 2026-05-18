@@ -251,6 +251,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 async function isPremium(email) {
 
   if (!email) return false;
@@ -270,12 +271,12 @@ async function isPremium(email) {
     return false;
   }
 
-  const end = new Date(row.premium_until).getTime();
+  const end = Number(row.premium_until);
 
   console.log("PREMIUM RAW:", row.premium_until);
   console.log("PREMIUM END:", end);
 
-  if (isNaN(end)) {
+  if (!end || isNaN(end)) {
     return false;
   }
 
