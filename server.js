@@ -252,6 +252,7 @@ app.use((req, res, next) => {
 });
 
 async function isPremium(email) {
+
   if (!email) return false;
 
   const result = await pool.query(
@@ -265,9 +266,20 @@ async function isPremium(email) {
 
   const row = result.rows[0];
 
-  if (!row || !row.premium_until) return false;
+  if (!row || row.premium_until == null) {
+    return false;
+  }
 
-  return Number(row.premium_until) > Date.now();
+  const end = new Date(row.premium_until).getTime();
+
+  console.log("PREMIUM RAW:", row.premium_until);
+  console.log("PREMIUM END:", end);
+
+  if (isNaN(end)) {
+    return false;
+  }
+
+  return end > Date.now();
 }
 
 //---------------------------
