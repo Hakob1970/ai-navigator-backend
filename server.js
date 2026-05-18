@@ -298,7 +298,10 @@ app.get("/api/premium/check", async (req, res) => {
 
     const row = result.rows[0];
 
-    if (!row || !row.premium_until) {
+    console.log("RAW PREMIUM:", row?.premium_until);
+console.log("TYPE:", typeof row?.premium_until);
+
+     if (!row || row.premium_until == null){
       return res.json({
         premium: false,
         daysLeft: 0,
@@ -306,19 +309,22 @@ app.get("/api/premium/check", async (req, res) => {
       });
     }
 
-    const now = new Date();
-    const end = new Date(row.premium_until);
+  const now = Date.now();
+const end = Number(row.premium_until);
 
-    const diffMs = end - now;
-    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+   console.log("END:", end);
+console.log("NOW:", now); 
 
-    if (daysLeft <= 0) {
-      return res.json({
-        premium: false,
-        daysLeft: 0,
-        warning: "EXPIRED"
-      });
-    }
+if (!end || isNaN(end)) {
+  return res.json({
+    premium: false,
+    daysLeft: 0,
+    warning: "INVALID_PREMIUM"
+  });
+}
+
+const diffMs = end - now;
+const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     let warning = null;
 
