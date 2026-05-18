@@ -110,9 +110,11 @@ app.post(
         return res.status(400).json({ error: "No data" });
       }
 
-      const email = String(data.user_email || "")
-        .trim()
-        .toLowerCase();
+     const email = decodeURIComponent(
+  String(data.user_email || "")
+)
+  .trim()
+  .toLowerCase();
 
       if (!email) {
         console.log("❌ No email from Lemon");
@@ -254,6 +256,12 @@ app.use((req, res, next) => {
 
 async function isPremium(email) {
 
+    email = decodeURIComponent(email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!email) return false;
+
   if (!email) return false;
 
   const result = await pool.query(
@@ -290,7 +298,9 @@ app.get("/api/premium/check", async (req, res) => {
 
   try {
 
-    const { email } = req.query;
+    const email = decodeURIComponent(req.query.email || "")
+  .trim()
+  .toLowerCase();
 
     if (!email) {
       return res.json({
@@ -375,7 +385,11 @@ const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 app.post("/api/device/check", async (req, res) => {
   try {
 
-    const { email, deviceId } = req.body;
+    const email = decodeURIComponent(req.body.email || "")
+  .trim()
+  .toLowerCase();
+
+const deviceId = req.body.deviceId;
 
     if (!email || !deviceId) {
       return res.json({ allowed: false });
@@ -545,9 +559,11 @@ app.post("/api/likes", async (req, res) => {
 app.post("/api/telegram/create-link", async (req, res) => {
   try {
 
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
+  const email = decodeURIComponent(
+  String(req.body.email || "")
+)
+  .trim()
+  .toLowerCase();
 
     if (!email) {
       return res.status(400).json({
@@ -594,9 +610,11 @@ if (!premium) {
 app.post("/api/lemon/create-checkout", async (req, res) => {
   try {
 
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
+ const email = decodeURIComponent(
+  String(req.body.email || "")
+)
+  .trim()
+  .toLowerCase();
 
     if (!email) {
       return res.status(400).json({ error: "No email" });
@@ -618,9 +636,11 @@ app.post("/api/lemon/create-checkout", async (req, res) => {
 app.post("/api/user/link-telegram", async (req, res) => {
   try {
 
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
+    const email = decodeURIComponent(
+  String(req.body.email || "")
+)
+  .trim()
+  .toLowerCase();
 
     const telegramId = String(req.body.telegramId || "").trim();
 
@@ -711,8 +731,17 @@ app.post("/api/user/change-email", async (req, res) => {
       return res.status(400).json({ error: "Missing email data" });
     }
 
-    const oldUserId = String(oldEmail).trim().toLowerCase();
-    const newUserId = String(newEmail).trim().toLowerCase();
+const oldUserId = decodeURIComponent(
+  String(oldEmail || "")
+)
+  .trim()
+  .toLowerCase();
+
+const newUserId = decodeURIComponent(
+  String(newEmail || "")
+)
+  .trim()
+  .toLowerCase();
 
     if (oldUserId === newUserId) {
       return res.json({ success: true, userId: newUserId });
