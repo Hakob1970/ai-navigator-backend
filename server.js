@@ -336,6 +336,13 @@ if (!end || isNaN(end)) {
 }
 
 const diffMs = end - now;
+   if (diffMs <= 0) {
+  return res.json({
+    premium: false,
+    daysLeft: 0,
+    warning: "EXPIRED"
+  });
+} 
 const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     let warning = null;
