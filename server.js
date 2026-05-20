@@ -262,8 +262,6 @@ async function isPremium(email) {
 
   if (!email) return false;
 
-  if (!email) return false;
-
   const result = await pool.query(
     `
     SELECT premium_until
@@ -483,6 +481,7 @@ const deviceId = req.body.deviceId;
   console.error(err.stack);
 
   return res.status(500).json({
+    allowed: false,
     error: "DEVICE_CHECK_FAILED"
   });
 }
