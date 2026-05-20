@@ -1,48 +1,44 @@
-# ai-support-bot.py
-
 import os
 import sqlite3
-from datetime import datetime
-
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
 # =========================
-# CONFIG
+# ENV
 # =========================
 
 TOKEN = os.getenv("SUPPORT_BOT_TOKEN")
-ADMIN_ID = int(os.getenv("SUPPORT_ADMIN_ID"))
+ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 
-DB_FILE = "support.db"
+if not TOKEN:
+    raise Exception("SUPPORT_BOT_TOKEN is missing")
+
+if not ADMIN_ID:
+    raise Exception("SUPPORT_ADMIN_ID is missing")
+
+ADMIN_ID = int(ADMIN_ID)
 
 # =========================
-# DATABASE
+# DB
 # =========================
 
-conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+conn = sqlite3.connect("support.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
+    user_id INTEGER PRIMARY KEY,
     username TEXT,
-    first_seen TEXT
+    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 """)
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT,
-    message TEXT,
-    created_at TEXT
+    user_id INTEGER,
+    text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 """)
 
@@ -54,25 +50,17 @@ conn.commit()
 
 def save_user(user_id, username):
     cursor.execute("""
-    INSERT OR IGNORE INTO users (user_id, username, first_seen)
-    VALUES (?, ?, ?)
-    """, (
-        str(user_id),
-        username,
-        datetime.utcnow().isoformat()
-    ))
+    INSERT OR IGNORE INTO users (user_id, username)
+    VALUES (?, ?)
+    """, (user_id, username))
     conn.commit()
 
 
-def save_message(user_id, message):
+def save_message(user_id, text):
     cursor.execute("""
-    INSERT INTO messages (user_id, message, created_at)
-    VALUES (?, ?, ?)
-    """, (
-        str(user_id),
-        message,
-        datetime.utcnow().isoformat()
-    ))
+    INSERT INTO messages (user_id, text)
+    VALUES (?, ?)
+    """, (user_id, text))
     conn.commit()
 
 # =========================
@@ -82,10 +70,9 @@ def save_message(user_id, message):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
-    save_user(
-        user.id,
-        user.username or "unknown"
-    )
+    username = user.username or "no_username"
+
+    save_user(user.id, username)
 
     await update.message.reply_text(
         "👋 Welcome to AI Navigator Support\n\n"
@@ -101,20 +88,17 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     user = update.effective_user
     text = update.message.text
 
-    save_user(
-        user.id,
-        user.username or "unknown"
-    )
+    username = user.username or "no_username"
 
+    save_user(user.id, username)
     save_message(user.id, text)
 
     admin_message = (
-        f"📩 NEW SUPPORT MESSAGE\n\n"
+        "📩 NEW SUPPORT MESSAGE\n\n"
         f"👤 User ID: {user.id}\n"
-        f"📛 Username: @{user.username}\n\n"
+        f"📛 Username: @{username}\n\n"
         f"💬 Message:\n{text}\n\n"
-        f"Reply:\n"
-        f"/reply {user.id} your_message"
+        f"Reply:\n/reply {user.id} your_message"
     )
 
     await context.bot.send_message(
@@ -133,23 +117,23 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Not allowed")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("Usage: /reply user_id message")
         return
 
     try:
-        args = context.args
-
-        user_id = args[0]
-        reply_text = " ".join(args[1:])
-
-        if not reply_text:
-            await update.message.reply_text("❌ Empty reply")
-            return
+        user_id = int(context.args[0])
+        reply_text = " ".join(context.args[1:])
 
         await context.bot.send_message(
-            chat_id=int(user_id),
+            chat_id=user_id,
             text=(
                 "📩 Support Reply\n\n"
-                f"{reply_text}"
+                f"{reply_text}\n\n"
+                "— AI Navigator Support"
             )
         )
 
@@ -159,12 +143,13 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error: {e}")
 
 # =========================
-# USERS LIST
+# USERS LIST (ADMIN)
 # =========================
 
 async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("⛔ Not allowed")
         return
 
     cursor.execute("""
@@ -182,11 +167,15 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "👥 LAST USERS\n\n"
 
-    for row in rows:
+    for r in rows:
+        uid, username, created = r
+
+        uname = f"@{username}" if username and username != "no_username" else "no_username"
+
         text += (
-            f"ID: {row[0]}\n"
-            f"User: @{row[1]}\n"
-            f"Joined: {row[2]}\n\n"
+            f"ID: {uid}\n"
+            f"User: {uname}\n"
+            f"Joined: {created}\n\n"
         )
 
     await update.message.reply_text(text)
@@ -196,29 +185,15 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # =========================
 
 def main():
-
-    if not TOKEN:
-        print("❌ SUPPORT_BOT_TOKEN missing")
-        return
-
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reply", reply_command))
     app.add_handler(CommandHandler("users", users_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
 
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle_user_message
-        )
-    )
-
-    print("🤖 AI Support Bot running...")
-
+    print("🤖 Support Bot running...")
     app.run_polling()
-
-# =========================
 
 if __name__ == "__main__":
     main()
