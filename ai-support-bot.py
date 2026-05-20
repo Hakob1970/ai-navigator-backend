@@ -88,7 +88,7 @@ async def handle_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     user = update.effective_user
     text = update.message.text
 
-    username = user.username or "no_username"
+    username = f"@{user.username}" if user.username else f"id_{user.id}"
 
     save_user(user.id, username)
     save_message(user.id, text)
