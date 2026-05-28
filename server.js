@@ -15,6 +15,9 @@ console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
 
 const app = express();
 
+console.log("CREEM ENV:", process.env.CREEM_API_KEY);
+console.log("PRODUCT ENV:", process.env.CREEM_PRODUCT_ID);
+
 // =========================
 // DB (POSTGRES)
 // =========================
