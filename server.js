@@ -7,6 +7,7 @@ const { Pool } = require("pg");
 const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
+const creemRouter = require("./creem");
 
 console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
 
@@ -605,6 +606,7 @@ if (!premium) {
 // =========================
 // STRIPE CHECKOUT
 // =========================
+app.use("/api/creem", creemRouter);
 
 app.post("/api/lemon/create-checkout", async (req, res) => {
   try {
