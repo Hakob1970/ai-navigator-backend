@@ -14,6 +14,10 @@ router.post("/create-checkout", async (req, res) => {
       .trim()
       .toLowerCase();
 
+    console.log("CREEM KEY:", process.env.CREEM_API_KEY);
+console.log("PRODUCT:", process.env.CREEM_PRODUCT_ID);
+console.log("EMAIL:", email);
+
     if (!email) {
       return res.status(400).json({ error: "No email" });
     }
