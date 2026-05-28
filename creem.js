@@ -13,6 +13,8 @@ router.post("/create-checkout", async (req, res) => {
     )
       .trim()
       .toLowerCase();
+    console.log("KEY LENGTH:", process.env.CREEM_API_KEY?.length);
+console.log("KEY START:", process.env.CREEM_API_KEY?.slice(0, 10));
     console.log("ENV CHECK:", {
   key: process.env.CREEM_API_KEY,
   product: process.env.CREEM_PRODUCT_ID
