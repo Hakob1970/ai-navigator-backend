@@ -13,6 +13,10 @@ router.post("/create-checkout", async (req, res) => {
     )
       .trim()
       .toLowerCase();
+    console.log("ENV CHECK:", {
+  key: process.env.CREEM_API_KEY,
+  product: process.env.CREEM_PRODUCT_ID
+});
 
     console.log("CREEM KEY:", process.env.CREEM_API_KEY);
 console.log("PRODUCT:", process.env.CREEM_PRODUCT_ID);
@@ -42,9 +46,15 @@ console.log("EMAIL:", email);
     });
 
   } catch (err) {
-    console.error("CREEM CHECKOUT ERROR:", err);
-    return res.status(500).json({ error: "Creem error" });
-  }
+  console.error("CREEM ERROR STATUS:", err?.response?.status);
+  console.error("CREEM ERROR DATA:", err?.response?.data);
+  console.error("CREEM ERROR MESSAGE:", err.message);
+
+  return res.status(500).json({
+    error: "Creem error",
+    details: err?.response?.data || err.message
+  });
+}
 });
 
 module.exports = router;
