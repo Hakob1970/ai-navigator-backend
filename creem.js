@@ -1,0 +1,46 @@
+import express from "express";
+import axios from "axios";
+
+const router = express.Router();
+
+// =========================
+// CREEM CHECKOUT
+// =========================
+router.post("/create-checkout", async (req, res) => {
+  try {
+    const email = decodeURIComponent(
+      String(req.body.email || "")
+    )
+      .trim()
+      .toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ error: "No email" });
+    }
+
+    const response = await axios.post(
+      "https://api.creem.io/v1/checkouts",
+      {
+        product_id: process.env.CREEM_PRODUCT_ID,
+        customer: {
+          email: email
+        }
+      },
+      {
+        headers: {
+          "x-api-key": process.env.CREEM_API_KEY,
+        },
+      }
+    );
+
+    return res.json({
+      url: response.data.checkout_url
+    });
+
+  } catch (err) {
+    console.error("CREEM CHECKOUT ERROR:", err);
+    return res.status(500).json({ error: "Creem error" });
+  }
+});
+
+export default router;
