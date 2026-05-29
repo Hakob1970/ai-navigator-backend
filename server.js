@@ -99,6 +99,9 @@ app.post(
         body = JSON.parse(req.body.toString());
       }
 
+      console.log("🔥 FULL WEBHOOK:");
+console.log(JSON.stringify(body, null, 2));
+
       console.log("🔥 LEMON WEBHOOK HIT");
       console.log("EVENT:", body?.meta?.event_name);
 
