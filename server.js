@@ -105,22 +105,22 @@ console.log(JSON.stringify(body, null, 2));
       console.log("🔥 LEMON WEBHOOK HIT");
       console.log("EVENT:", body?.meta?.event_name);
 
-      const eventName = body?.meta?.event_name;
+      const eventName = body?.eventType;
 
       if (
-        eventName !== "subscription_created" &&
-        eventName !== "subscription_updated"
+  eventName !== "subscription.create" &&
+  eventName !== "subscription.update"
       ) {
         return res.json({ received: true });
       }
 
-      const data = body?.data?.attributes;
+      const data = body?.object;
       if (!data) {
         return res.status(400).json({ error: "No data" });
       }
 
      const email = decodeURIComponent(
-  String(data.user_email || "")
+  String(data?.customer?.email || "")
 )
   .trim()
   .toLowerCase();
@@ -130,7 +130,7 @@ console.log(JSON.stringify(body, null, 2));
         return res.json({ received: true });
       }
 
-      const paymentId = String(body?.data?.id || "");
+      const paymentId = String(body?.id || "");
 
       // 🔁 prevent duplicates
       const exists = await pool.query(
