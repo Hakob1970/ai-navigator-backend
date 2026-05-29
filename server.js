@@ -86,7 +86,7 @@ console.log("🧹 OLD DEVICES CLEANED");
 })();
 
 // =========================
-// LEMON SQUEEZY WEBHOOK
+// CREEM WEBHOOK
 // =========================
 app.post(
   "/api/lemon/webhook",
@@ -100,16 +100,15 @@ app.post(
       }
 
       console.log("🔥 FULL WEBHOOK:");
-console.log(JSON.stringify(body, null, 2));
-
-      console.log("🔥 LEMON WEBHOOK HIT");
-      console.log("EVENT:", body?.meta?.event_name);
+     console.log("🔥 CREEM WEBHOOK HIT");
+      console.log("EVENT:", body?.eventType);
 
       const eventName = body?.eventType;
 
       if (
   eventName !== "subscription.create" &&
-  eventName !== "subscription.update"
+  eventName !== "subscription.update" &&
+  eventName !== "subscription.paid"
       ) {
         return res.json({ received: true });
       }
