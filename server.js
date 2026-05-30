@@ -436,7 +436,11 @@ const deviceId = req.body.deviceId;
         [email, deviceId]
       );
 
-      return res.json({ allowed: true });
+     return res.json({
+  allowed: true,
+  count,
+  devices: devicesList.rows
+});
     }
 
     // =========================
@@ -472,7 +476,7 @@ console.log("DEVICES LIST:", devicesList.rows);
     // =========================
     // 3. ЛИМИТ 3 УСТРОЙСТВА
     // =========================
-    if (devices.rows.length >= 3) {
+    if (count >= 3) {
       return res.json({
         allowed: false,
         error: "DEVICE_LIMIT",
@@ -496,7 +500,11 @@ console.log("DEVICES LIST:", devicesList.rows);
       [email, deviceId]
     );
 
-    return res.json({ allowed: true });
+    return res.json({
+  allowed: true,
+  count,
+  devices: devicesList.rows
+});
 
   } catch (err) {
   console.error("DEVICE ERROR FULL:", err);
