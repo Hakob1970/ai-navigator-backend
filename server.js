@@ -444,14 +444,15 @@ const deviceId = req.body.deviceId;
     // =========================
     const devices = await pool.query(
       `
-      SELECT *
+      SELECT COUNT(DISTINCT device_id)
       FROM user_devices
       WHERE email = $1
       AND last_seen > NOW() - INTERVAL '30 days'
       `,
       [email]
     );
-
+    
+    console.log("ALL DEVICES:", devices.rows);
     console.log("COUNT:", devices.rows.length);
 
     // =========================
@@ -461,7 +462,6 @@ const deviceId = req.body.deviceId;
       return res.json({
         allowed: false,
         error: "DEVICE_LIMIT",
-        message: "Лимит исчерпан. У вас уже 3 премиум устройства."
       });
     }
 
