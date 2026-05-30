@@ -392,10 +392,10 @@ app.post("/api/device/check", async (req, res) => {
   try {
 
     const email = decodeURIComponent(req.body.email || "")
-  .trim()
-  .toLowerCase();
+      .trim()
+      .toLowerCase();
 
-const deviceId = req.body.deviceId;
+    const deviceId = req.body.deviceId;
 
     if (!email || !deviceId) {
       return res.json({ allowed: false });
@@ -411,7 +411,7 @@ const deviceId = req.body.deviceId;
     }
 
     // =========================
-    // 1. Проверяем устройство
+    // 1. CHECK EXISTING DEVICE
     // =========================
     const existing = await pool.query(
       `
@@ -424,27 +424,8 @@ const deviceId = req.body.deviceId;
       [email, deviceId]
     );
 
-    if (existing.rowCount > 0) {
-
-      await pool.query(
-        `
-        UPDATE user_devices
-        SET last_seen = NOW()
-        WHERE email = $1
-        AND device_id = $2
-        `,
-        [email, deviceId]
-      );
-
-     return res.json({
-  allowed: true,
-  count,
-  devices: devicesList.rows
-});
-    }
-
     // =========================
-    // 2. СЧИТАЕМ АКТИВНЫЕ УСТРОЙСТВА
+    // 2. COUNT + DEVICE LIST (ВСЕГДА ДО RETURN)
     // =========================
     const devices = await pool.query(
       `
@@ -458,33 +439,54 @@ const deviceId = req.body.deviceId;
 
     const count = parseInt(devices.rows[0].count, 10);
 
-    console.log("DEVICE COUNT:", count);
-
     const devicesList = await pool.query(
-  `
-  SELECT device_id, last_seen
-  FROM user_devices
-  WHERE email = $1
-  AND last_seen > NOW() - INTERVAL '30 days'
-  ORDER BY last_seen DESC
-  `,
-  [email]
-);
+      `
+      SELECT device_id, last_seen
+      FROM user_devices
+      WHERE email = $1
+      AND last_seen > NOW() - INTERVAL '30 days'
+      ORDER BY last_seen DESC
+      `,
+      [email]
+    );
 
-console.log("DEVICES LIST:", devicesList.rows);
+    console.log("DEVICE COUNT:", count);
+    console.log("DEVICES LIST:", devicesList.rows);
 
     // =========================
-    // 3. ЛИМИТ 3 УСТРОЙСТВА
+    // 3. EXISTING DEVICE
     // =========================
-    if (count >= 3) {
+    if (existing.rowCount > 0) {
+
+      await pool.query(
+        `
+        UPDATE user_devices
+        SET last_seen = NOW()
+        WHERE email = $1
+        AND device_id = $2
+        `,
+        [email, deviceId]
+      );
+
       return res.json({
-        allowed: false,
-        error: "DEVICE_LIMIT",
+        allowed: true,
+        count,
+        devices: devicesList.rows
       });
     }
 
     // =========================
-    // 4. ДОБАВЛЯЕМ УСТРОЙСТВО
+    // 4. LIMIT CHECK
+    // =========================
+    if (count >= 3) {
+      return res.json({
+        allowed: false,
+        error: "DEVICE_LIMIT"
+      });
+    }
+
+    // =========================
+    // 5. NEW DEVICE INSERT
     // =========================
     await pool.query(
       `
@@ -501,22 +503,21 @@ console.log("DEVICES LIST:", devicesList.rows);
     );
 
     return res.json({
-  allowed: true,
-  count,
-  devices: devicesList.rows
-});
+      allowed: true,
+      count,
+      devices: devicesList.rows
+    });
 
   } catch (err) {
-  console.error("DEVICE ERROR FULL:", err);
-  console.error(err.stack);
+    console.error("DEVICE ERROR FULL:", err);
+    console.error(err.stack);
 
-  return res.status(500).json({
-    allowed: false,
-    error: "DEVICE_CHECK_FAILED"
-  });
-}
+    return res.status(500).json({
+      allowed: false,
+      error: "DEVICE_CHECK_FAILED"
+    });
+  }
 });
-
 
 
 app.get("/api/likes", async (req, res) => {
