@@ -456,6 +456,19 @@ const deviceId = req.body.deviceId;
 
     console.log("DEVICE COUNT:", count);
 
+    const devicesList = await pool.query(
+  `
+  SELECT device_id, last_seen
+  FROM user_devices
+  WHERE email = $1
+  AND last_seen > NOW() - INTERVAL '30 days'
+  ORDER BY last_seen DESC
+  `,
+  [email]
+);
+
+console.log("DEVICES LIST:", devicesList.rows);
+
     // =========================
     // 3. ЛИМИТ 3 УСТРОЙСТВА
     // =========================
