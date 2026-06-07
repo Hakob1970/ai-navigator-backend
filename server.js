@@ -93,24 +93,36 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
+      // =========================
+      // PARSE BODY SAFELY
+      // =========================
       let body = {};
 
       if (req.body) {
         body = JSON.parse(req.body.toString());
       }
 
-      console.log("🔥 POLAR WEBHOOK HIT:");
-      console.log("EVENT:", body?.eventType || body?.type);
+      const eventType = body?.eventType || body?.type;
 
-      // ⚠️ пока логируем ВСЕ события (Polar events уточним позже)
+      console.log("🔥 POLAR WEBHOOK HIT:");
+      console.log("EVENT:", eventType);
+
       const data = body?.data || body?.object || body;
 
       if (!data) {
         return res.status(400).json({ error: "No data" });
       }
 
+      // =========================
+      // EMAIL EXTRACTION
+      // =========================
       const email = decodeURIComponent(
-        String(data?.customer?.email || data?.email || "")
+        String(
+          data?.customer?.email ||
+          data?.email ||
+          data?.metadata?.email ||
+          ""
+        )
       )
         .trim()
         .toLowerCase();
@@ -120,9 +132,27 @@ app.post(
         return res.json({ received: true });
       }
 
+      // =========================
+      // ONLY SUCCESS PAYMENTS
+      // =========================
+      if (eventType !== "order.paid") {
+        console.log("⏭ Ignored event:", eventType);
+        return res.json({ received: true });
+      }
+
+      // =========================
+      // PAYMENT ID
+      // =========================
       const paymentId = String(body?.id || data?.id || "");
 
-      // 🔁 prevent duplicates
+      if (!paymentId) {
+        console.log("❌ No paymentId");
+        return res.json({ received: true });
+      }
+
+      // =========================
+      // DUPLICATE CHECK
+      // =========================
       const exists = await pool.query(
         `SELECT 1 FROM payments WHERE session_id = $1`,
         [paymentId]
@@ -134,7 +164,7 @@ app.post(
       }
 
       // =========================
-      // GET SUBSCRIPTION
+      // CURRENT PREMIUM CHECK
       // =========================
       const sub = await pool.query(
         `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
@@ -145,14 +175,11 @@ app.post(
       const current = Number(sub.rows[0]?.premium_until || 0);
 
       // =========================
-      // DURATION (TEMP DEFAULT 30 DAYS)
+      // DURATION (30 DAYS)
       // =========================
       const durationDays = 30;
       const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
-      // =========================
-      // SAFE LOGIC
-      // =========================
       const base = Math.max(now, current);
       let premiumUntil = base + durationMs;
 
@@ -164,7 +191,7 @@ app.post(
       }
 
       // =========================
-      // SAVE SUBSCRIPTION
+      // SAVE / UPDATE SUBSCRIPTION
       // =========================
       await pool.query(
         `
@@ -177,7 +204,16 @@ app.post(
       );
 
       // =========================
-      // SAVE PAYMENT
+      // GET AMOUNT (REAL DATA)
+      // =========================
+      const amount =
+        body?.data?.total_amount ||
+        body?.data?.amount ||
+        body?.product_price?.price_amount ||
+        0;
+
+      // =========================
+      // SAVE PAYMENT (FULL LOG)
       // =========================
       await pool.query(
         `
@@ -189,20 +225,21 @@ app.post(
           amount,
           duration_days,
           premium_until
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
         `,
         [
           email,
           paymentId,
           "polar",
           "paid",
-          0,
+          amount,
           durationDays,
           premiumUntil
         ]
       );
 
-      console.log("✅ POLAR PREMIUM ACTIVATED:", email, premiumUntil);
+      console.log("💰 PREMIUM ACTIVATED:", email, premiumUntil);
 
       return res.json({ success: true });
 
