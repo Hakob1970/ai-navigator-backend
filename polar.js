@@ -34,6 +34,7 @@ router.post("/create-checkout", async (req, res) => {
     );
 
     console.log("✅ POLAR SUCCESS");
+    console.log("CHECKOUT RESPONSE:", response.data);
 
     return res.json({
       url: response.data.url
