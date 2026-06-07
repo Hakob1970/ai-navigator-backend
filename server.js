@@ -223,17 +223,19 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
+// 🔥 ЛОГИ СНАЧАЛА
 app.use((req, res, next) => {
   console.log("🌐 REQUEST:", req.method, req.url);
-  next();
-});
-
-app.use((req, res, next) => {
   console.log("🔥 INCOMING:", req.method, req.url);
   next();
 });
+
+// 👉 ROUTES ПОТОМ
+app.use("/api/polar", polarRouter);
+
+// static в самом конце
+app.use(express.static(path.join(__dirname, "public")));
 
 
 async function isPremium(email) {
