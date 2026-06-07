@@ -9,15 +9,15 @@ const { Pool } = require("pg");
 const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
-const creemRouter = require("./creem");
+
+// ❌ REMOVED: creemRouter
+// const creemRouter = require("./creem");
+
+const polarRouter = require("./polar"); // 🟢 NEW
 
 console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
 
 const app = express();
-
-console.log("CREEM ENV:", process.env.CREEM_API_KEY);
-console.log("PRODUCT ENV:", process.env.CREEM_PRODUCT_ID);
-
 // =========================
 // DB (POSTGRES)
 // =========================
@@ -86,10 +86,10 @@ console.log("🧹 OLD DEVICES CLEANED");
 })();
 
 // =========================
-// CREEM WEBHOOK
+// polar WEBHOOK
 // =========================
 app.post(
-  "/api/lemon/webhook",
+  "/api/polar/webhook",
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
@@ -99,37 +99,28 @@ app.post(
         body = JSON.parse(req.body.toString());
       }
 
-      console.log("🔥 FULL WEBHOOK:");
-     console.log("🔥 CREEM WEBHOOK HIT");
-      console.log("EVENT:", body?.eventType);
+      console.log("🔥 POLAR WEBHOOK HIT:");
+      console.log("EVENT:", body?.eventType || body?.type);
 
-      const eventName = body?.eventType;
+      // ⚠️ пока логируем ВСЕ события (Polar events уточним позже)
+      const data = body?.data || body?.object || body;
 
-      if (
-  eventName !== "subscription.create" &&
-  eventName !== "subscription.update" &&
-  eventName !== "subscription.paid"
-      ) {
-        return res.json({ received: true });
-      }
-
-      const data = body?.object;
       if (!data) {
         return res.status(400).json({ error: "No data" });
       }
 
-     const email = decodeURIComponent(
-  String(data?.customer?.email || "")
-)
-  .trim()
-  .toLowerCase();
+      const email = decodeURIComponent(
+        String(data?.customer?.email || data?.email || "")
+      )
+        .trim()
+        .toLowerCase();
 
       if (!email) {
-        console.log("❌ No email from Lemon");
+        console.log("❌ No email from Polar");
         return res.json({ received: true });
       }
 
-      const paymentId = String(body?.id || "");
+      const paymentId = String(body?.id || data?.id || "");
 
       // 🔁 prevent duplicates
       const exists = await pool.query(
@@ -154,35 +145,17 @@ app.post(
       const current = Number(sub.rows[0]?.premium_until || 0);
 
       // =========================
-      // PLAN DURATION
+      // DURATION (TEMP DEFAULT 30 DAYS)
       // =========================
-      const VARIANT_TO_DAYS = {
-        variant_30: 30,
-        variant_60: 60,
-        variant_120: 120,
-        variant_365: 365
-      };
-
-      const variantId =
-        data.variant_id ||
-        data.variant ||
-        data.plan_id ||
-        "variant_30";
-
-      const durationDays = VARIANT_TO_DAYS[String(variantId)] || 30;
+      const durationDays = 30;
       const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
       // =========================
-      // SAFE LOGIC (NO STACKING BUG)
+      // SAFE LOGIC
       // =========================
-
-      // ❗ FIX: always reset or extend safely
       const base = Math.max(now, current);
       let premiumUntil = base + durationMs;
 
-      // =========================
-      // HARD LIMIT: max 1 year
-      // =========================
       const MAX_YEAR = 365 * 24 * 60 * 60 * 1000;
       const maxAllowed = now + MAX_YEAR;
 
@@ -221,19 +194,20 @@ app.post(
         [
           email,
           paymentId,
-          "lemon",
+          "polar",
           "paid",
-          Number(data.total || 0),
+          0,
           durationDays,
           premiumUntil
         ]
       );
 
-      console.log("✅ PREMIUM ACTIVATED:", email, "UNTIL:", premiumUntil);
+      console.log("✅ POLAR PREMIUM ACTIVATED:", email, premiumUntil);
 
       return res.json({ success: true });
+
     } catch (err) {
-      console.error("❌ LEMON WEBHOOK ERROR:", err);
+      console.error("❌ POLAR WEBHOOK ERROR:", err);
       return res.status(200).json({ received: true });
     }
   }
@@ -636,32 +610,28 @@ if (!premium) {
 // =========================
 // STRIPE CHECKOUT
 // =========================
-app.use("/api/creem", creemRouter);
-
-app.post("/api/lemon/create-checkout", async (req, res) => {
+app.post("/api/polar/create-checkout", async (req, res) => {
   try {
-
- const email = decodeURIComponent(
-  String(req.body.email || "")
-)
-  .trim()
-  .toLowerCase();
+    const email = decodeURIComponent(
+      String(req.body.email || "")
+    )
+      .trim()
+      .toLowerCase();
 
     if (!email) {
       return res.status(400).json({ error: "No email" });
     }
 
-    const url =
-      `https://ai-navigator.lemonsqueezy.com/checkout/buy/8abbfae0-58cc-4ad9-b2eb-704294536514?checkout[email]=${encodeURIComponent(email)}`;
+    // ⚠️ пока используем static checkout link (как ты уже дал ранее)
+    const url = "https://buy.polar.sh/polar_cl_KAQ2nzn15fhbw9U0W8Hxjng6mlnK6vHjRcot80Rhmo9";
 
     return res.json({ url });
 
   } catch (err) {
-    console.error("LEMON ERROR:", err);
-    return res.status(500).json({ error: "Lemon error" });
+    console.error("POLAR ERROR:", err);
+    return res.status(500).json({ error: "Polar error" });
   }
 });
-
 
 
 app.post("/api/user/link-telegram", async (req, res) => {
