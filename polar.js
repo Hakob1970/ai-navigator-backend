@@ -9,20 +9,34 @@ router.post("/create-checkout", async (req, res) => {
       .trim()
       .toLowerCase();
 
+    const plan = String(req.body.plan || "premium"); 
+    // "premium" | "7d"
+
     if (!email) {
       return res.status(400).json({ error: "No email" });
     }
 
     console.log("🚀 POLAR CHECKOUT START");
     console.log("EMAIL:", email);
+    console.log("PLAN:", plan);
+
+    // 🎯 выбор продукта
+    let productId;
+
+    if (plan === "7d") {
+      productId = process.env.POLAR_PRODUCT_7D;
+    } else {
+      productId = process.env.POLAR_PRODUCT_ID; // premium
+    }
 
     const response = await axios.post(
       "https://api.polar.sh/v1/checkouts",
       {
-        product_id: process.env.POLAR_TEST_PRODUCT_ID,
+        product_id: productId,
         success_url: process.env.POLAR_SUCCESS_URL,
         metadata: {
-          email
+          email,
+          plan
         }
       },
       {
