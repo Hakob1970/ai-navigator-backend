@@ -93,9 +93,6 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      // =========================
-      // PARSE BODY SAFELY
-      // =========================
       let body = {};
 
       if (req.body) {
@@ -114,7 +111,7 @@ app.post(
       }
 
       // =========================
-      // EMAIL EXTRACTION
+      // EMAIL
       // =========================
       const email = decodeURIComponent(
         String(
@@ -133,20 +130,27 @@ app.post(
       }
 
       // =========================
-      // ONLY SUCCESS PAYMENTS
+      // ONLY SUBSCRIPTION EVENTS
       // =========================
-      if (eventType !== "order.paid") {
+      const allowedEvents = [
+        "subscription.created",
+        "subscription.active",
+        "subscription.updated"
+      ];
+
+      if (!allowedEvents.includes(eventType)) {
         console.log("⏭ Ignored event:", eventType);
         return res.json({ received: true });
       }
 
       // =========================
-      // PAYMENT ID
+      // SUBSCRIPTION ID (anti-duplicate)
       // =========================
-      const paymentId = String(body?.id || data?.id || "");
+      const subscriptionId =
+        String(data?.id || data?.subscription_id || "");
 
-      if (!paymentId) {
-        console.log("❌ No paymentId");
+      if (!subscriptionId) {
+        console.log("❌ No subscriptionId");
         return res.json({ received: true });
       }
 
@@ -155,32 +159,30 @@ app.post(
       // =========================
       const exists = await pool.query(
         `SELECT 1 FROM payments WHERE session_id = $1`,
-        [paymentId]
+        [subscriptionId]
       );
 
       if (exists.rowCount > 0) {
-        console.log("🔁 Duplicate webhook ignored:", paymentId);
+        console.log("🔁 Duplicate webhook ignored:", subscriptionId);
         return res.json({ received: true });
       }
 
       // =========================
-      // CURRENT PREMIUM CHECK
+      // DURATION (30 days subscription model)
       // =========================
+      const durationDays = 30;
+      const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
+      const now = Date.now();
+
       const sub = await pool.query(
         `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
         [email]
       );
 
-      const now = Date.now();
       const current = Number(sub.rows[0]?.premium_until || 0);
-
-      // =========================
-      // DURATION (30 DAYS)
-      // =========================
-      const durationDays = 30;
-      const durationMs = durationDays * 24 * 60 * 60 * 1000;
-
       const base = Math.max(now, current);
+
       let premiumUntil = base + durationMs;
 
       const MAX_YEAR = 365 * 24 * 60 * 60 * 1000;
@@ -191,7 +193,7 @@ app.post(
       }
 
       // =========================
-      // SAVE / UPDATE SUBSCRIPTION
+      // SAVE SUBSCRIPTION
       // =========================
       await pool.query(
         `
@@ -204,16 +206,16 @@ app.post(
       );
 
       // =========================
-      // GET AMOUNT (REAL DATA)
+      // AMOUNT (optional)
       // =========================
       const amount =
-        body?.data?.total_amount ||
-        body?.data?.amount ||
-        body?.product_price?.price_amount ||
+        data?.total_amount ||
+        data?.amount ||
+        data?.price ||
         0;
 
       // =========================
-      // SAVE PAYMENT (FULL LOG)
+      // SAVE PAYMENT LOG
       // =========================
       await pool.query(
         `
@@ -230,16 +232,17 @@ app.post(
         `,
         [
           email,
-          paymentId,
+          subscriptionId,
           "polar",
-          "paid",
+          "active",
           amount,
           durationDays,
           premiumUntil
         ]
       );
 
-      console.log("💰 PREMIUM ACTIVATED:", email, premiumUntil);
+      console.log("💰 PREMIUM ACTIVATED:", email);
+      console.log("⏳ VALID UNTIL:", premiumUntil);
 
       return res.json({ success: true });
 
