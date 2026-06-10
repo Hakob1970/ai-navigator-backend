@@ -9,6 +9,8 @@ const { Pool } = require("pg");
 const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
 
 // ❌ REMOVED: creemRouter
 // const creemRouter = require("./creem");
@@ -18,6 +20,13 @@ const polarRouter = require("./polar"); // 🟢 NEW
 console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
 
 const app = express();
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 // =========================
 // DB (POSTGRES)
 // =========================
@@ -85,6 +94,18 @@ console.log("🧹 OLD DEVICES CLEANED");
   }
 })();
 
+
+function verifyPolarSignature(rawBody, signature, secret) {
+  if (!signature || !secret) return false;
+
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+
+  return expected === signature;
+}
+
 // =========================
 // polar WEBHOOK
 // =========================
@@ -93,15 +114,33 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      let body = {};
+      console.log("🔥 POLAR WEBHOOK HIT");
 
-      if (req.body) {
-        body = JSON.parse(req.body.toString());
+      const signature =
+        req.headers["polar-signature"] ||
+        req.headers["x-polar-signature"];
+
+      const rawBody = req.body;
+
+      // 🔐 VERIFY SIGNATURE (ВАЖНО)
+      const isValid = verifyPolarSignature(
+        rawBody,
+        signature,
+        process.env.POLAR_WEBHOOK_SECRET
+      );
+
+      if (!isValid) {
+        console.log("🚨 INVALID POLAR WEBHOOK SIGNATURE");
+        return res.status(401).json({ error: "Invalid signature" });
       }
+
+      // =========================
+      // PARSE BODY
+      // =========================
+      const body = JSON.parse(rawBody.toString());
 
       const eventType = body?.eventType || body?.type;
 
-      console.log("🔥 POLAR WEBHOOK HIT:");
       console.log("EVENT:", eventType);
 
       const data = body?.data || body?.object || body;
@@ -139,18 +178,17 @@ app.post(
       ];
 
       if (!allowedEvents.includes(eventType)) {
-        console.log("⏭ Ignored event:", eventType);
         return res.json({ received: true });
       }
 
       // =========================
-      // SUBSCRIPTION ID (anti-duplicate)
+      // SUBSCRIPTION ID
       // =========================
-      const subscriptionId =
-        String(data?.id || data?.subscription_id || "");
+      const subscriptionId = String(
+        data?.id || data?.subscription_id || ""
+      );
 
       if (!subscriptionId) {
-        console.log("❌ No subscriptionId");
         return res.json({ received: true });
       }
 
@@ -163,12 +201,11 @@ app.post(
       );
 
       if (exists.rowCount > 0) {
-        console.log("🔁 Duplicate webhook ignored:", subscriptionId);
         return res.json({ received: true });
       }
 
       // =========================
-      // DURATION (30 days subscription model)
+      // DURATION
       // =========================
       const durationDays = 30;
       const durationMs = durationDays * 24 * 60 * 60 * 1000;
@@ -206,7 +243,7 @@ app.post(
       );
 
       // =========================
-      // AMOUNT (optional)
+      // SAVE PAYMENT LOG
       // =========================
       const amount =
         data?.total_amount ||
@@ -214,9 +251,6 @@ app.post(
         data?.price ||
         0;
 
-      // =========================
-      // SAVE PAYMENT LOG
-      // =========================
       await pool.query(
         `
         INSERT INTO payments (
@@ -242,7 +276,6 @@ app.post(
       );
 
       console.log("💰 PREMIUM ACTIVATED:", email);
-      console.log("⏳ VALID UNTIL:", premiumUntil);
 
       return res.json({ success: true });
 
@@ -264,6 +297,9 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use("/api/premium", apiLimiter);
+app.use("/api/device", apiLimiter);
+
 // 🔥 ЛОГИ СНАЧАЛА
 app.use((req, res, next) => {
   console.log("🌐 REQUEST:", req.method, req.url);
@@ -276,6 +312,11 @@ app.use("/api/polar", polarRouter);
 
 // static в самом конце
 app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/api/test-telegram", async (req, res) => {
+  await sendTelegramAlert("🚀 TEST ALERT FROM SERVER");
+  res.json({ ok: true });
+});
 
 
 async function isPremium(email) {
