@@ -354,13 +354,15 @@ app.use((req, res, next) => {
 // 👉 ROUTES ПОТОМ
 app.use("/api/polar", polarRouter);
 
-// static в самом конце
-app.use(express.static(path.join(__dirname, "public")));
-
 app.get("/api/test-telegram", async (req, res) => {
   await sendTelegramAlert("🚀 TEST ALERT FROM SERVER");
   res.json({ ok: true });
 });
+
+// static в самом конце
+app.use(express.static(path.join(__dirname, "public")));
+
+
 
 
 async function isPremium(email) {
