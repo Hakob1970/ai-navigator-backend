@@ -94,6 +94,27 @@ console.log("🧹 OLD DEVICES CLEANED");
   }
 })();
 
+async function sendTelegramAlert(message) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!token || !chatId) {
+      console.log("Telegram not configured");
+      return;
+    }
+
+    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+      chat_id: chatId,
+      text: message,
+      parse_mode: "HTML"
+    });
+
+  } catch (err) {
+    console.error("Telegram alert error:", err.message);
+  }
+}
+
 
 function verifyPolarSignature(rawBody, signature, secret) {
   if (!signature || !secret) return false;
@@ -130,9 +151,17 @@ app.post(
       );
 
       if (!isValid) {
-        console.log("🚨 INVALID POLAR WEBHOOK SIGNATURE");
-        return res.status(401).json({ error: "Invalid signature" });
-      }
+  console.log("🚨 INVALID POLAR WEBHOOK SIGNATURE");
+
+  await sendTelegramAlert(
+    `🚨 <b>SECURITY ALERT</b>\n` +
+    `Invalid webhook signature\n` +
+    `IP: ${req.ip}\n` +
+    `Time: ${new Date().toISOString()}`
+  );
+
+  return res.status(401).json({ error: "Invalid signature" });
+}
 
       // =========================
       // PARSE BODY
@@ -163,10 +192,18 @@ app.post(
         .trim()
         .toLowerCase();
 
-      if (!email) {
-        console.log("❌ No email from Polar");
-        return res.json({ received: true });
-      }
+    if (!email) {
+  console.log("❌ No email from Polar");
+
+  await sendTelegramAlert(
+    `⚠️ <b>WEBHOOK WARNING</b>\n` +
+    `Missing email from Polar\n` +
+    `Event: ${eventType}\n` +
+    `Time: ${new Date().toISOString()}`
+  );
+
+  return res.json({ received: true });
+}
 
       // =========================
       // ONLY SUBSCRIPTION EVENTS
@@ -276,6 +313,13 @@ app.post(
       );
 
       console.log("💰 PREMIUM ACTIVATED:", email);
+
+      await sendTelegramAlert(
+  `💰 <b>PAYMENT SUCCESS</b>\n` +
+  `User: ${email}\n` +
+  `Plan: Polar subscription\n` +
+  `Until: ${new Date(premiumUntil).toISOString()}`
+);
 
       return res.json({ success: true });
 
