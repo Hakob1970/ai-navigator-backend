@@ -415,92 +415,99 @@ app.get("/api/premium/check", apiLimiter, async (req, res) => {
   try {
 
     const emailRaw = req.query.email || "";
+    const deviceId = req.headers["x-device-id"];
+    const apiKey = req.headers["x-client-key"];
 
-    if (typeof emailRaw !== "string" || emailRaw.length > 200) {
-      return res.json({
+    // --------------------
+    // SECURITY LAYER 1
+    // --------------------
+    if (!deviceId) {
+      return res.status(401).json({
         premium: false,
-        daysLeft: 0,
-        warning: "BAD_EMAIL"
+        warning: "NO_DEVICE"
       });
+    }
+
+    // --------------------
+    // SECURITY LAYER 2
+    // --------------------
+    if (!apiKey || apiKey !== process.env.CLIENT_API_KEY) {
+      return res.status(401).json({
+        premium: false,
+        warning: "UNAUTHORIZED"
+      });
+    }
+
+    // --------------------
+    // EMAIL VALIDATION
+    // --------------------
+    if (typeof emailRaw !== "string" || emailRaw.length > 200) {
+      return res.json({ premium: false, warning: "BAD_EMAIL" });
     }
 
     const email = decodeURIComponent(emailRaw)
       .trim()
       .toLowerCase();
 
-    if (!email || !email.includes("@")) {
-      return res.json({
+    if (!email.includes("@")) {
+      return res.json({ premium: false, warning: "NO_EMAIL" });
+    }
+
+    // --------------------
+    // DEVICE CHECK
+    // --------------------
+    const deviceCheck = await pool.query(
+      `SELECT 1 FROM user_devices WHERE email=$1 AND device_id=$2`,
+      [email, deviceId]
+    );
+
+    if (deviceCheck.rowCount === 0) {
+      return res.status(403).json({
         premium: false,
-        daysLeft: 0,
-        warning: "NO_EMAIL"
+        warning: "DEVICE_NOT_ALLOWED"
       });
     }
 
-    // =========================
-    // GET PREMIUM
-    // =========================
+    // --------------------
+    // PREMIUM CHECK
+    // --------------------
     const result = await pool.query(
-      `
-      SELECT premium_until
-      FROM subscriptions
-      WHERE user_id = $1
-      `,
+      `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
       [email]
     );
 
     const row = result.rows[0];
 
-    if (!row || row.premium_until == null) {
-      return res.json({
-        premium: false,
-        daysLeft: 0,
-        warning: "NO_PREMIUM"
-      });
+    if (!row || !row.premium_until) {
+      return res.json({ premium: false, warning: "NO_PREMIUM" });
     }
 
     const now = Date.now();
     const end = Number(row.premium_until);
 
     if (!Number.isFinite(end) || end <= 0) {
-      return res.json({
-        premium: false,
-        daysLeft: 0,
-        warning: "INVALID_PREMIUM"
-      });
+      return res.json({ premium: false, warning: "INVALID_PREMIUM" });
     }
 
     const diffMs = end - now;
 
     if (diffMs <= 0) {
-      return res.json({
-        premium: false,
-        daysLeft: 0,
-        warning: "EXPIRED"
-      });
+      return res.json({ premium: false, warning: "EXPIRED" });
     }
 
     const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-    let warning = null;
-
-    if (daysLeft <= 1) warning = "CRITICAL";
-    else if (daysLeft <= 3) warning = "WARNING";
-    else if (daysLeft <= 7) warning = "INFO";
-
     return res.json({
       premium: true,
       daysLeft,
-      premiumUntil: end,
-      warning
+      premiumUntil: end
     });
 
   } catch (err) {
-
     console.error("❌ PREMIUM CHECK ERROR:", err);
 
     return res.status(500).json({
       premium: false,
-      daysLeft: 0,
       warning: "SERVER_ERROR"
     });
   }
