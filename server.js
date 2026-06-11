@@ -11,6 +11,7 @@ const path = require("path");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 // ❌ REMOVED: creemRouter
 // const creemRouter = require("./creem");
@@ -93,6 +94,33 @@ console.log("🧹 OLD DEVICES CLEANED");
 
   }
 })();
+
+
+
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader) {
+    req.user = null;
+    return next(); // fallback режим (старый email продолжит работать)
+  }
+
+  try {
+    const token = authHeader.replace("Bearer ", "");
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = decoded;
+
+    next();
+
+  } catch (err) {
+    return res.status(401).json({
+      premium: false,
+      warning: "INVALID_TOKEN"
+    });
+  }
+}
 
 async function sendTelegramAlert(message) {
   try {
@@ -321,11 +349,22 @@ app.post(
 
       console.log("💰 PREMIUM ACTIVATED:", email);
 
-      await sendTelegramAlert(
+      const token = jwt.sign(
+  {
+    email: email,
+    deviceId: "auto",
+    premium: true
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+
+await sendTelegramAlert(
   `💰 <b>PAYMENT SUCCESS</b>\n` +
   `User: ${email}\n` +
   `Plan: Polar subscription\n` +
-  `Until: ${new Date(premiumUntil).toISOString()}`
+  `Until: ${new Date(premiumUntil).toISOString()}\n\n` +
+  `🔐 JWT TEST:\n${token}`
 );
 
       return res.json({ success: true });
@@ -410,52 +449,53 @@ async function isPremium(email) {
 //---------------------------
 // PREMIUM CHECK (HARDENED)
 //--------------------------
-app.get("/api/premium/check", apiLimiter, async (req, res) => {
+app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
 
   try {
 
-    const emailRaw = req.query.email || "";
-    const deviceId = req.headers["x-device-id"];
-    const apiKey = req.headers["x-client-key"];
+    // =========================
+    // GET USER (JWT OR EMAIL FALLBACK)
+    // =========================
+    let email = null;
+    let deviceId = req.headers["x-device-id"];
 
-    // --------------------
-    // SECURITY LAYER 1
-    // --------------------
+    if (req.user) {
+      email = req.user.email;
+      deviceId = req.user.deviceId;
+    } else {
+      email = decodeURIComponent(req.query.email || "")
+        .trim()
+        .toLowerCase();
+    }
+
+    // =========================
+    // VALIDATION
+    // =========================
+    if (!email || email.length > 200) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "NO_EMAIL"
+      });
+    }
+
+    if (!email.includes("@")) {
+      return res.json({
+        premium: false,
+        warning: "BAD_EMAIL"
+      });
+    }
+
     if (!deviceId) {
-      return res.status(401).json({
+      return res.json({
         premium: false,
         warning: "NO_DEVICE"
       });
     }
 
-    // --------------------
-    // SECURITY LAYER 2
-    // --------------------
-    if (!apiKey || apiKey !== process.env.CLIENT_API_KEY) {
-      return res.status(401).json({
-        premium: false,
-        warning: "UNAUTHORIZED"
-      });
-    }
-
-    // --------------------
-    // EMAIL VALIDATION
-    // --------------------
-    if (typeof emailRaw !== "string" || emailRaw.length > 200) {
-      return res.json({ premium: false, warning: "BAD_EMAIL" });
-    }
-
-    const email = decodeURIComponent(emailRaw)
-      .trim()
-      .toLowerCase();
-
-    if (!email.includes("@")) {
-      return res.json({ premium: false, warning: "NO_EMAIL" });
-    }
-
-    // --------------------
+    // =========================
     // DEVICE CHECK
-    // --------------------
+    // =========================
     const deviceCheck = await pool.query(
       `SELECT 1 FROM user_devices WHERE email=$1 AND device_id=$2`,
       [email, deviceId]
@@ -468,9 +508,9 @@ app.get("/api/premium/check", apiLimiter, async (req, res) => {
       });
     }
 
-    // --------------------
+    // =========================
     // PREMIUM CHECK
-    // --------------------
+    // =========================
     const result = await pool.query(
       `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
       [email]
@@ -479,28 +519,29 @@ app.get("/api/premium/check", apiLimiter, async (req, res) => {
     const row = result.rows[0];
 
     if (!row || !row.premium_until) {
-      return res.json({ premium: false, warning: "NO_PREMIUM" });
+      return res.json({
+        premium: false,
+        warning: "NO_PREMIUM"
+      });
     }
 
     const now = Date.now();
     const end = Number(row.premium_until);
 
-    if (!Number.isFinite(end) || end <= 0) {
-      return res.json({ premium: false, warning: "INVALID_PREMIUM" });
+    if (!Number.isFinite(end) || end <= now) {
+      return res.json({
+        premium: false,
+        warning: "EXPIRED"
+      });
     }
 
-    const diffMs = end - now;
-
-    if (diffMs <= 0) {
-      return res.json({ premium: false, warning: "EXPIRED" });
-    }
-
-    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
 
     return res.json({
       premium: true,
       daysLeft,
-      premiumUntil: end
+      premiumUntil: end,
+      auth: req.user ? "JWT" : "EMAIL"
     });
 
   } catch (err) {
