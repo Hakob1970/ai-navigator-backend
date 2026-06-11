@@ -22,6 +22,8 @@ console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 100,
