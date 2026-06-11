@@ -405,6 +405,52 @@ app.get("/api/test-telegram", async (req, res) => {
   res.json({ ok: true });
 });
 
+app.post("/api/auth/session", async (req, res) => {
+  try {
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    const deviceId = req.headers["x-device-id"] || "unknown";
+
+    if (!email) {
+      return res.status(400).json({ error: "NO_EMAIL" });
+    }
+
+    const result = await pool.query(
+      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+      [email]
+    );
+
+    const row = result.rows[0];
+
+    const now = Date.now();
+    const premiumUntil = Number(row?.premium_until || 0);
+
+    const isPremium = premiumUntil > now;
+
+    const token = jwt.sign(
+      {
+        email,
+        premium: isPremium
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.json({
+      token,
+      premium: isPremium
+    });
+
+  } catch (err) {
+    console.error("SESSION ERROR:", err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+
+
 // static в самом конце
 app.use(express.static(path.join(__dirname, "public")));
 
