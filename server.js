@@ -237,9 +237,16 @@ app.post(
         [subscriptionId]
       );
 
-      if (exists.rowCount > 0) {
-        return res.json({ received: true });
-      }
+     if (exists.rowCount > 0) {
+
+  await sendTelegramAlert(
+    `🔁 <b>DUPLICATE WEBHOOK</b>\n` +
+    `User: ${email}\n` +
+    `Subscription: ${subscriptionId}`
+  );
+
+  return res.json({ received: true });
+}
 
       // =========================
       // DURATION
@@ -581,12 +588,21 @@ app.post("/api/device/check", async (req, res) => {
     // =========================
     // 4. LIMIT CHECK
     // =========================
-    if (count >= 3) {
-      return res.json({
-        allowed: false,
-        error: "DEVICE_LIMIT"
-      });
-    }
+  if (count >= 3) {
+
+  await sendTelegramAlert(
+    `🚨 <b>DEVICE LIMIT HIT</b>\n` +
+    `User: ${email}\n` +
+    `Devices: ${count}\n` +
+    `Device: ${deviceId}\n` +
+    `Time: ${new Date().toISOString()}`
+  );
+
+  return res.json({
+    allowed: false,
+    error: "DEVICE_LIMIT"
+  });
+}
 
     // =========================
     // 5. NEW DEVICE INSERT
