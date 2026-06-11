@@ -408,17 +408,27 @@ async function isPremium(email) {
 }
 
 //---------------------------
- // PREMIUM CHECK
+// PREMIUM CHECK (HARDENED)
 //--------------------------
-app.get("/api/premium/check", async (req, res) => {
+app.get("/api/premium/check", apiLimiter, async (req, res) => {
 
   try {
 
-    const email = decodeURIComponent(req.query.email || "")
-  .trim()
-  .toLowerCase();
+    const emailRaw = req.query.email || "";
 
-    if (!email) {
+    if (typeof emailRaw !== "string" || emailRaw.length > 200) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "BAD_EMAIL"
+      });
+    }
+
+    const email = decodeURIComponent(emailRaw)
+      .trim()
+      .toLowerCase();
+
+    if (!email || !email.includes("@")) {
       return res.json({
         premium: false,
         daysLeft: 0,
@@ -426,6 +436,9 @@ app.get("/api/premium/check", async (req, res) => {
       });
     }
 
+    // =========================
+    // GET PREMIUM
+    // =========================
     const result = await pool.query(
       `
       SELECT premium_until
@@ -437,10 +450,7 @@ app.get("/api/premium/check", async (req, res) => {
 
     const row = result.rows[0];
 
-    console.log("RAW PREMIUM:", row?.premium_until);
-console.log("TYPE:", typeof row?.premium_until);
-
-     if (!row || row.premium_until == null){
+    if (!row || row.premium_until == null) {
       return res.json({
         premium: false,
         daysLeft: 0,
@@ -448,29 +458,28 @@ console.log("TYPE:", typeof row?.premium_until);
       });
     }
 
-  const now = Date.now();
-const end = Number(row.premium_until);
+    const now = Date.now();
+    const end = Number(row.premium_until);
 
-   console.log("END:", end);
-console.log("NOW:", now); 
+    if (!Number.isFinite(end) || end <= 0) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "INVALID_PREMIUM"
+      });
+    }
 
-if (!end || isNaN(end)) {
-  return res.json({
-    premium: false,
-    daysLeft: 0,
-    warning: "INVALID_PREMIUM"
-  });
-}
+    const diffMs = end - now;
 
-const diffMs = end - now;
-   if (diffMs <= 0) {
-  return res.json({
-    premium: false,
-    daysLeft: 0,
-    warning: "EXPIRED"
-  });
-} 
-const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffMs <= 0) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        warning: "EXPIRED"
+      });
+    }
+
+    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     let warning = null;
 
@@ -481,7 +490,7 @@ const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     return res.json({
       premium: true,
       daysLeft,
-      premiumUntil: row.premium_until,
+      premiumUntil: end,
       warning
     });
 
@@ -589,15 +598,6 @@ app.post("/api/device/check", async (req, res) => {
     // 4. LIMIT CHECK
     // =========================
   if (count >= 3) {
-
-  await sendTelegramAlert(
-    `🚨 <b>DEVICE LIMIT HIT</b>\n` +
-    `User: ${email}\n` +
-    `Devices: ${count}\n` +
-    `Device: ${deviceId}\n` +
-    `Time: ${new Date().toISOString()}`
-  );
-
   return res.json({
     allowed: false,
     error: "DEVICE_LIMIT"
