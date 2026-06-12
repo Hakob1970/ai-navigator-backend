@@ -612,6 +612,10 @@ app.post("/api/device/check", async (req, res) => {
 
     const deviceId = req.body.deviceId;
 
+    console.log("EMAIL:", email);
+console.log("DEVICE:", deviceId);
+console.log("BODY:", req.body);
+
     if (!email || !deviceId) {
       return res.json({ allowed: false });
     }
