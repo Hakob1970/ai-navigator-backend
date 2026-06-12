@@ -519,12 +519,33 @@ async function isPremium(email) {
 // PREMIUM CHECK (HARDENED)
 //--------------------------
 app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
-  console.log("👉 PREMIUM CHECK ENTERED");
   try {
-    const email = req.user.email;
-    const deviceId = req.headers["x-device-id"];
 
-    // DEVICE CHECK
+    let email = null;
+    let deviceId = req.headers["x-device-id"];
+
+    // ✅ 1. JWT режим (основной)
+    if (req.user) {
+      email = req.user.email;
+    }
+
+    // ❗ 2. fallback (только если нет JWT)
+    if (!email) {
+      email = decodeURIComponent(req.query.email || "")
+        .trim()
+        .toLowerCase();
+    }
+
+    // =========================
+    // VALIDATION
+    // =========================
+    if (!email || !email.includes("@")) {
+      return res.json({
+        premium: false,
+        warning: "NO_EMAIL"
+      });
+    }
+
     if (!deviceId) {
       return res.json({
         premium: false,
