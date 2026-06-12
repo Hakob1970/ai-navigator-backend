@@ -12,6 +12,7 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const { checkDevice } = require("./utils/device");
 
 // ❌ REMOVED: creemRouter
 // const creemRouter = require("./creem");
