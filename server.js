@@ -451,6 +451,29 @@ app.post("/api/auth/session", async (req, res) => {
   }
 });
 
+app.get("/api/debug-jwt", (req, res) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.json({ ok: false, error: "NO_TOKEN" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    return res.json({
+      ok: true,
+      decoded
+    });
+
+  } catch (e) {
+    return res.json({
+      ok: false,
+      error: e.message
+    });
+  }
+});
+
 
 
 // static в самом конце
