@@ -532,7 +532,10 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
 
     if (req.user) {
       email = req.user.email;
-      deviceId = req.user.deviceId;
+      // ✅ FIX: Fallback to header if JWT doesn't have deviceId
+      if (!deviceId && req.user.deviceId) {
+        deviceId = req.user.deviceId;
+      }
     } else {
       email = decodeURIComponent(req.query.email || "")
         .trim()
