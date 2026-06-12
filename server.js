@@ -519,6 +519,7 @@ async function isPremium(email) {
 // PREMIUM CHECK (HARDENED)
 //--------------------------
 app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
+  console.log("👉 PREMIUM CHECK ENTERED");
   try {
     const email = req.user.email;
     const deviceId = req.headers["x-device-id"];
