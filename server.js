@@ -98,31 +98,30 @@ console.log("🧹 OLD DEVICES CLEANED");
 })();
 
 
-
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
-    req.user = null;
-    return next(); // fallback режим (старый email продолжит работать)
+    return res.status(401).json({
+      error: "NO_TOKEN"
+    });
   }
 
   try {
     const token = authHeader.replace("Bearer ", "");
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    req.user = decoded; // { email, premium }
 
     next();
 
   } catch (err) {
     return res.status(401).json({
-      premium: false,
-      warning: "INVALID_TOKEN"
+      error: "INVALID_TOKEN"
     });
   }
 }
+
 
 async function sendTelegramAlert(message) {
   try {
@@ -413,8 +412,6 @@ app.post("/api/auth/session", async (req, res) => {
       .trim()
       .toLowerCase();
 
-    const deviceId = req.headers["x-device-id"] || "unknown";
-
     if (!email) {
       return res.status(400).json({ error: "NO_EMAIL" });
     }
@@ -446,7 +443,7 @@ app.post("/api/auth/session", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("SESSION ERROR:", err);
+    console.error(err);
     return res.status(500).json({ error: "SERVER_ERROR" });
   }
 });
@@ -521,45 +518,11 @@ async function isPremium(email) {
 // PREMIUM CHECK (HARDENED)
 //--------------------------
 app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
-
   try {
+    const email = req.user.email;
+    const deviceId = req.headers["x-device-id"];
 
-    // =========================
-    // GET USER (JWT OR EMAIL FALLBACK)
-    // =========================
-    let email = null;
-    let deviceId = req.headers["x-device-id"];
-
-    if (req.user) {
-      email = req.user.email;
-      // ✅ FIX: Fallback to header if JWT doesn't have deviceId
-      if (!deviceId && req.user.deviceId) {
-        deviceId = req.user.deviceId;
-      }
-    } else {
-      email = decodeURIComponent(req.query.email || "")
-        .trim()
-        .toLowerCase();
-    }
-
-    // =========================
-    // VALIDATION
-    // =========================
-    if (!email || email.length > 200) {
-      return res.json({
-        premium: false,
-        daysLeft: 0,
-        warning: "NO_EMAIL"
-      });
-    }
-
-    if (!email.includes("@")) {
-      return res.json({
-        premium: false,
-        warning: "BAD_EMAIL"
-      });
-    }
-
+    // DEVICE CHECK
     if (!deviceId) {
       return res.json({
         premium: false,
@@ -567,9 +530,6 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
       });
     }
 
-    // =========================
-    // DEVICE CHECK
-    // =========================
     const deviceCheck = await pool.query(
       `SELECT 1 FROM user_devices WHERE email=$1 AND device_id=$2`,
       [email, deviceId]
@@ -582,9 +542,7 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
       });
     }
 
-    // =========================
     // PREMIUM CHECK
-    // =========================
     const result = await pool.query(
       `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
       [email]
@@ -592,34 +550,24 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
 
     const row = result.rows[0];
 
-    if (!row || !row.premium_until) {
-      return res.json({
-        premium: false,
-        warning: "NO_PREMIUM"
-      });
-    }
-
     const now = Date.now();
-    const end = Number(row.premium_until);
+    const end = Number(row?.premium_until || 0);
 
-    if (!Number.isFinite(end) || end <= now) {
+    if (!end || end <= now) {
       return res.json({
         premium: false,
+        daysLeft: 0,
         warning: "EXPIRED"
       });
     }
 
-    const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-
     return res.json({
       premium: true,
-      daysLeft,
-      premiumUntil: end,
-      auth: req.user ? "JWT" : "EMAIL"
+      daysLeft: Math.ceil((end - now) / (1000 * 60 * 60 * 24))
     });
 
   } catch (err) {
-    console.error("❌ PREMIUM CHECK ERROR:", err);
+    console.error("PREMIUM ERROR:", err);
 
     return res.status(500).json({
       premium: false,
