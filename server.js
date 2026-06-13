@@ -600,12 +600,16 @@ if (!email) {
 
 app.post("/api/device/check", async (req, res) => {
   try {
+const email = req.user?.email;
 
-    const email = decodeURIComponent(req.body.email || "")
-      .trim()
-      .toLowerCase();
+if (!email) {
+  return res.status(401).json({
+    allowed: false,
+    error: "UNAUTHORIZED"
+  });
+}
 
-    const deviceId = req.body.deviceId;
+const deviceId = req.body.deviceId;
 
     console.log("EMAIL:", email);
 console.log("DEVICE:", deviceId);
