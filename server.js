@@ -591,144 +591,57 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
 });
 
 
-app.post("/api/device/check", async (req, res) => {
+app.post("/api/device/check", authMiddleware, async (req, res) => {
   try {
-const email = req.user?.email;
 
-if (!email) {
-  return res.status(401).json({
-    allowed: false,
-    error: "UNAUTHORIZED"
-  });
-}
+    const email = req.user?.email;
+    const deviceId = req.body.deviceId;
 
-const deviceId = req.body.deviceId;
-
-    console.log("EMAIL:", email);
-console.log("DEVICE:", deviceId);
-console.log("BODY:", req.body);
-
-    if (!email || !deviceId) {
-      return res.json({ allowed: false });
+    if (!email) {
+      return res.status(401).json({ allowed: false, error: "UNAUTHORIZED" });
     }
 
-    const premium = await isPremium(email);
-
-    if (!premium) {
-      return res.json({
-        allowed: false,
-        error: "NO_PREMIUM"
-      });
+    if (!deviceId) {
+      return res.json({ allowed: false, error: "NO_DEVICE" });
     }
 
-    // =========================
-    // 1. CHECK EXISTING DEVICE
-    // =========================
     const existing = await pool.query(
-      `
-      SELECT 1
-      FROM user_devices
-      WHERE email = $1
-      AND device_id = $2
-      LIMIT 1
-      `,
+      `SELECT 1 FROM user_devices WHERE email=$1 AND device_id=$2 LIMIT 1`,
       [email, deviceId]
     );
 
-    // =========================
-    // 2. COUNT + DEVICE LIST (ВСЕГДА ДО RETURN)
-    // =========================
-    const devices = await pool.query(
-      `
-      SELECT COUNT(DISTINCT device_id) AS count
-      FROM user_devices
-      WHERE email = $1
-      AND last_seen > NOW() - INTERVAL '30 days'
-      `,
-      [email]
-    );
-
-    const count = parseInt(devices.rows[0].count, 10);
-
-    const devicesList = await pool.query(
-      `
-      SELECT device_id, last_seen
-      FROM user_devices
-      WHERE email = $1
-      AND last_seen > NOW() - INTERVAL '30 days'
-      ORDER BY last_seen DESC
-      `,
-      [email]
-    );
-
-    console.log("DEVICE COUNT:", count);
-    console.log("DEVICES LIST:", devicesList.rows);
-
-    // =========================
-    // 3. EXISTING DEVICE
-    // =========================
     if (existing.rowCount > 0) {
-
       await pool.query(
-        `
-        UPDATE user_devices
-        SET last_seen = NOW()
-        WHERE email = $1
-        AND device_id = $2
-        `,
+        `UPDATE user_devices SET last_seen = NOW() WHERE email=$1 AND device_id=$2`,
         [email, deviceId]
       );
 
-      return res.json({
-        allowed: true,
-        count,
-        devices: devicesList.rows
-      });
+      return res.json({ allowed: true });
     }
 
-    // =========================
-    // 4. LIMIT CHECK
-    // =========================
-  if (count >= 3) {
-  return res.json({
-    allowed: false,
-    error: "DEVICE_LIMIT"
-  });
-}
+    const count = await pool.query(
+      `SELECT COUNT(*) FROM user_devices WHERE email=$1`,
+      [email]
+    );
 
-    // =========================
-    // 5. NEW DEVICE INSERT
-    // =========================
+    if (parseInt(count.rows[0].count) >= 3) {
+      return res.json({ allowed: false, error: "DEVICE_LIMIT" });
+    }
+
     await pool.query(
-      `
-      INSERT INTO user_devices (
-        email,
-        device_id,
-        last_seen
-      )
-      VALUES ($1, $2, NOW())
-      ON CONFLICT (email, device_id)
-      DO UPDATE SET last_seen = NOW()
-      `,
+      `INSERT INTO user_devices (email, device_id, last_seen)
+       VALUES ($1, $2, NOW())`,
       [email, deviceId]
     );
 
-    return res.json({
-      allowed: true,
-      count,
-      devices: devicesList.rows
-    });
+    return res.json({ allowed: true });
 
   } catch (err) {
-    console.error("DEVICE ERROR FULL:", err);
-    console.error(err.stack);
-
-    return res.status(500).json({
-      allowed: false,
-      error: "DEVICE_CHECK_FAILED"
-    });
+    console.error("DEVICE ERROR:", err);
+    return res.status(500).json({ allowed: false, error: "DEVICE_CHECK_FAILED" });
   }
 });
+
 
 
 app.get("/api/likes", async (req, res) => {
