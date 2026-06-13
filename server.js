@@ -525,16 +525,14 @@ app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
     let deviceId = req.headers["x-device-id"];
 
     // ✅ 1. JWT режим (основной)
-    if (req.user) {
-      email = req.user.email;
-    }
+const email = req.user?.email;
 
-    // ❗ 2. fallback (только если нет JWT)
-    if (!email) {
-      email = decodeURIComponent(req.query.email || "")
-        .trim()
-        .toLowerCase();
-    }
+if (!email) {
+  return res.status(401).json({
+    premium: false,
+    warning: "UNAUTHORIZED"
+  });
+}
 
     // =========================
     // VALIDATION
