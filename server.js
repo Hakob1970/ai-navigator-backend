@@ -849,6 +849,41 @@ if (!premium) {
   });
 }
 });
+
+
+app.get("/api/bot/premium", async (req, res) => {
+  try {
+    const email = String(req.query.email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!email) {
+      return res.json({ premium: false });
+    }
+
+    const result = await pool.query(
+      `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
+      [email]
+    );
+
+    const row = result.rows[0];
+
+    if (!row?.premium_until) {
+      return res.json({ premium: false });
+    }
+
+    return res.json({
+      premium: Number(row.premium_until) > Date.now()
+    });
+
+  } catch (err) {
+    console.error("BOT PREMIUM ERROR:", err);
+
+    return res.json({
+      premium: false
+    });
+  }
+});
 // =========================
 // STRIPE CHECKOUT
 // =========================
