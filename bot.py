@@ -88,7 +88,7 @@ def get_lang(user_id):
 def is_premium(email):
     try:
         res = requests.get(
-            f"{BACKEND}/api/premium/check",
+            f"{BACKEND}/api/bot/premium",
             params={"email": email},
             timeout=3
         )
