@@ -210,12 +210,13 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # 2. проверяем premium ЧЕРЕЗ EMAIL
             res = requests.get(
-                f"{BACKEND}/api/premium/check",
+                f"{BACKEND}/api/bot/premium",
                 params={"email": email},
                 timeout=3
             )
 
-            premium = res.json().get("premium", False)
+            data = res.json()
+            premium = bool(data.get("premium"))
 
             # 3. доступ
             if premium:
