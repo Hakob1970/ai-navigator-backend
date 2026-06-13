@@ -521,26 +521,16 @@ async function isPremium(email) {
 app.get("/api/premium/check", apiLimiter, authMiddleware, async (req, res) => {
   try {
 
-    let email = null;
-    let deviceId = req.headers["x-device-id"];
-
-    // ✅ 1. JWT режим (основной)
-const email = req.user?.email;
-
-if (!email) {
-  return res.status(401).json({
-    premium: false,
-    warning: "UNAUTHORIZED"
-  });
-}
+    const email = req.user?.email;
+    const deviceId = req.headers["x-device-id"];
 
     // =========================
-    // VALIDATION
+    // AUTH CHECK
     // =========================
-    if (!email || !email.includes("@")) {
-      return res.json({
+    if (!email) {
+      return res.status(401).json({
         premium: false,
-        warning: "NO_EMAIL"
+        warning: "UNAUTHORIZED"
       });
     }
 
@@ -551,6 +541,9 @@ if (!email) {
       });
     }
 
+    // =========================
+    // DEVICE CHECK
+    // =========================
     const deviceCheck = await pool.query(
       `SELECT 1 FROM user_devices WHERE email=$1 AND device_id=$2`,
       [email, deviceId]
