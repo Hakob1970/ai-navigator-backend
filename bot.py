@@ -86,6 +86,7 @@ def get_lang(user_id):
         return "en"
 
 def is_premium(email):
+    print("BOT PREMIUM CHECK:", email)
     try:
         res = requests.get(
             f"{BACKEND}/api/bot/premium",
