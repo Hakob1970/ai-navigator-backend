@@ -403,9 +403,11 @@ app.use((req, res, next) => {
 // 👉 ROUTES ПОТОМ
 app.use("/api/polar", polarRouter);
 
-app.get("/api/test-telegram", async (req, res) => {
-  await sendTelegramAlert("🚀 TEST ALERT FROM SERVER");
-  res.json({ ok: true });
+app.get("/api/test-telegram", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Backend is alive 🔥"
+  });
 });
 
 app.post("/api/auth/session", async (req, res) => {
