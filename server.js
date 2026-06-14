@@ -41,10 +41,9 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-(async () => {
+setTimeout(async () => {
   try {
-
-    console.log("📦 DB CONNECTING...");
+    console.log("📦 DB INIT (background)");
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS subscriptions (
@@ -84,20 +83,17 @@ const pool = new Pool({
     `);
 
     await pool.query(`
-  DELETE FROM user_devices
-  WHERE last_seen < NOW() - INTERVAL '365 days'
-`);
+      DELETE FROM user_devices
+      WHERE last_seen < NOW() - INTERVAL '365 days'
+    `);
 
-console.log("🧹 OLD DEVICES CLEANED");
-
+    console.log("🧹 OLD DEVICES CLEANED");
     console.log("✅ DB READY");
 
   } catch (err) {
-
     console.error("❌ DB INIT ERROR:", err);
-
   }
-})();
+}, 0);
 
 
 function authMiddleware(req, res, next) {
