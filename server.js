@@ -13,6 +13,7 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { checkDevice } = require("./utils/device");
+const autoMechanicRoute = require("./routes/autoMechanic");
 
 // ❌ REMOVED: creemRouter
 // const creemRouter = require("./creem");
@@ -472,7 +473,7 @@ app.get("/api/debug-jwt", (req, res) => {
   }
 });
 
-
+app.use("/api/auto-mechanic", apiLimiter, autoMechanicRoute);
 
 // static в самом конце
 app.use(express.static(path.join(__dirname, "public")));
