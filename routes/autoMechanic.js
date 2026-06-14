@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-
 router.post("/", async (req, res) => {
     try {
         const { problem, car, year, vin } = req.body;
@@ -39,12 +38,24 @@ Provide:
 
         const data = await response.json();
 
-        res.json({
+        console.log("OPENROUTER RESPONSE:", data);
+
+        if (!data.choices || !data.choices[0]) {
+            return res.json({
+                result: "AI temporarily unavailable. Please try again."
+            });
+        }
+
+        return res.json({
             result: data.choices[0].message.content
         });
 
     } catch (err) {
-        res.status(500).json({ error: "AI error" });
+        console.error("AUTO MECHANIC ERROR:", err);
+
+        return res.status(500).json({
+            error: "AI error"
+        });
     }
 });
 
