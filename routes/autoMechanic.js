@@ -219,7 +219,7 @@ const newUsed = updateResult.rows[0].auto_mechanic_used;
         // =========================
      return res.json({
   result: data.choices[0].message.content,
-  remaining: 50 - newUsed
+  remaining: 50 - newUsed,
     resetAt: user.auto_mechanic_reset_at      
 });
 
