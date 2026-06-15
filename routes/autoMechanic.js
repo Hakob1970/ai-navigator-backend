@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const db = require("../db"); // или как у тебя подключена база
+const pool = require("../server").pool;
 
 router.post("/", async (req, res) => {
     try {
