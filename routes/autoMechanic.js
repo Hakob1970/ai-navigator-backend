@@ -1,10 +1,37 @@
 const express = require("express");
 const router = express.Router();
 
+const db = require("../db"); // или как у тебя подключена база
+
 router.post("/", async (req, res) => {
     try {
+
         const { problem, car, year, vin } = req.body;
 
+        const email = req.user.email; // 👈 уже даёт authMiddleware
+
+        // 1. найти пользователя
+        const user = await db.users.findUnique({
+            where: { email }
+        });
+
+        if (!user || !user.auto_mechanic_premium) {
+            return res.status(403).json({
+                error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
+            });
+        }
+
+        // 2. лимиты
+        const used = user.auto_mechanic_used || 0;
+        const limit = 50;
+
+        if (used >= limit) {
+            return res.status(403).json({
+                error: "MONTHLY_LIMIT_REACHED"
+            });
+        }
+
+        // 3. prompt
         const prompt = `
 You are an expert automotive mechanic AI.
 
@@ -38,23 +65,31 @@ Provide:
 
         const data = await response.json();
 
-        console.log("OPENROUTER RESPONSE:", data);
-
-        if (!data.choices || !data.choices[0]) {
+        if (!data.choices?.[0]) {
             return res.json({
-                result: "AI temporarily unavailable. Please try again."
+                result: "AI temporarily unavailable"
             });
         }
 
+        // 4. увеличить usage
+        await db.users.update({
+            where: { email },
+            data: {
+                auto_mechanic_used: used + 1
+            }
+        });
+
+        // 5. ответ
         return res.json({
-            result: data.choices[0].message.content
+            result: data.choices[0].message.content,
+            remaining: limit - (used + 1)
         });
 
     } catch (err) {
         console.error("AUTO MECHANIC ERROR:", err);
 
         return res.status(500).json({
-            error: "AI error"
+            error: "AI_ERROR"
         });
     }
 });
