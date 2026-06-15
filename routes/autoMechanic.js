@@ -18,13 +18,43 @@ router.post("/", authMiddleware, async (req, res) => {
             [email]
         );
 
-        const user = userResult.rows[0];
+const user = userResult.rows[0];
 
-        if (!user || !user.auto_mechanic_premium) {
-            return res.status(403).json({
-                error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
-            });
-        }
+// =========================
+// 1. PREMIUM CHECK
+// =========================
+if (!user || !user.auto_mechanic_premium) {
+    return res.status(403).json({
+        error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
+    });
+}
+
+// =========================
+// 2. RESET LOGIC (30 DAYS)
+// =========================
+const now = Date.now();
+
+if (!user.auto_mechanic_reset_at || now > Number(user.auto_mechanic_reset_at)) {
+    const resetAt = now + 30 * 24 * 60 * 60 * 1000;
+
+    await pool.query(
+        `UPDATE users 
+         SET auto_mechanic_used = 0,
+             auto_mechanic_reset_at = $1
+         WHERE email = $2`,
+        [resetAt, email]
+    );
+
+    user.auto_mechanic_used = 0;
+    user.auto_mechanic_reset_at = resetAt;
+}
+
+            const refreshed = await pool.query(
+        "SELECT auto_mechanic_used FROM users WHERE email = $1",
+        [email]
+    );
+
+    user.auto_mechanic_used = refreshed.rows[0].auto_mechanic_used || 0;
 
         // =========================
         // 2. LIMIT CHECK
