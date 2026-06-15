@@ -5,7 +5,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const express = require("express");
-const { Pool } = require("pg");
 const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
@@ -13,6 +12,8 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { checkDevice } = require("./utils/device");
+const authMiddleware = require("./middleware/auth");
+const pool = require("./db/pool");
 const autoMechanicRoute = require("./routes/autoMechanic");
 
 // ❌ REMOVED: creemRouter
@@ -35,13 +36,6 @@ const apiLimiter = rateLimit({
 // =========================
 // DB (POSTGRES)
 // =========================
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-app.locals.pool = pool;
 
 setTimeout(async () => {
   try {
@@ -96,31 +90,6 @@ setTimeout(async () => {
     console.error("❌ DB INIT ERROR:", err);
   }
 }, 0);
-
-
-function authMiddleware(req, res, next) {
-  const authHeader = req.headers["authorization"];
-
-  if (!authHeader) {
-    return res.status(401).json({
-      error: "NO_TOKEN"
-    });
-  }
-
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded; // { email, premium }
-
-    next();
-
-  } catch (err) {
-    return res.status(401).json({
-      error: "INVALID_TOKEN"
-    });
-  }
-}
 
 
 async function sendTelegramAlert(message) {
