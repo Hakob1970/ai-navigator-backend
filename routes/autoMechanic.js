@@ -2,13 +2,26 @@ const authMiddleware = require("../middleware/auth");
 const pool = require("../db/pool");
 const express = require("express");
 const router = express.Router();
+// =========================
+// ANTI SPAM MEMORY (PER USER)
+// =========================
+const userRateMap = new Map();
 
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     try {
 
         const { problem, car, year, vin } = req.body;
 
         const email = req.user.email;
+
+        // =========================
+// BLOCK CHECK
+// =========================
+if (user.is_blocked) {
+    return res.status(403).json({
+        error: "USER_BLOCKED"
+    });
+}
 
         // =========================
         // 1. GET USER (POSTGRES)
@@ -67,6 +80,24 @@ if (!user.auto_mechanic_reset_at || now > Number(user.auto_mechanic_reset_at)) {
                 error: "MONTHLY_LIMIT_REACHED"
             });
         }
+
+        // =========================
+// ANTI ABUSE CHECK (HITS)
+// =========================
+const suspiciousResult = await pool.query(
+    "SELECT suspicious_hits FROM users WHERE email = $1",
+    [email]
+);
+
+const hits = suspiciousResult.rows[0]?.suspicious_hits || 0;
+
+if (hits > 20) {
+    await sendTelegramAlert(`🚨 USER FLAGGED: ${email}`);
+
+    return res.status(403).json({
+        error: "ACCOUNT_TEMP_BLOCKED"
+    });
+}
 
         // =========================
         // 3. OPENROUTER PROMPT
