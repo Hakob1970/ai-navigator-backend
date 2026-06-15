@@ -41,6 +41,8 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+app.locals.pool = pool;
+
 setTimeout(async () => {
   try {
     console.log("📦 DB INIT (background)");
