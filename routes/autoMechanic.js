@@ -6,8 +6,6 @@ const router = express.Router();
 router.post("/", authMiddleware, async (req, res) => {
     try {
 
-        const pool = req.app.locals.pool;
-
         const { problem, car, year, vin } = req.body;
 
         const email = req.user.email;
