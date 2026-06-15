@@ -2,10 +2,67 @@ const authMiddleware = require("../middleware/auth");
 const pool = require("../db/pool");
 const express = require("express");
 const router = express.Router();
+
+async function sendTelegramAlert(message) {
+    try {
+        const axios = require("axios");
+
+        const token = process.env.TELEGRAM_SECURITY_BOT_TOKEN;
+        const chatId = process.env.TELEGRAM_CHAT_ID;
+
+        if (!token || !chatId) return;
+
+        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chatId,
+            text: message
+        });
+
+    } catch (err) {
+        console.error("Telegram error:", err.message);
+    }
+}
 // =========================
 // ANTI SPAM MEMORY (PER USER)
 // =========================
 const userRateMap = new Map();
+
+setInterval(() => {
+    const now = Date.now();
+
+    for (const [email, timestamp] of userRateMap.entries()) {
+        if (now - timestamp > 10 * 60 * 1000) {
+            userRateMap.delete(email);
+        }
+    }
+}, 5 * 60 * 1000);
+
+// =========================
+// SECURITY: ANTI SPAM CHECK
+// =========================
+function abuseGuard(req, res, next) {
+
+    const email = req.user?.email;
+
+    // дополнительная защита
+    if (!email) return next();
+
+    const now = Date.now();
+
+    const last = userRateMap.get(email) || 0;
+
+    if (now - last < 2000) {
+
+        sendTelegramAlert(`🚨 SPAM DETECTED: ${email || "UNKNOWN"}`);
+
+        return res.status(429).json({
+            error: "TOO_FAST_REQUEST"
+        });
+    }
+
+    userRateMap.set(email, now);
+
+    next();
+}
 
 router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     try {
