@@ -2,10 +2,10 @@ const authMiddleware = require("../middleware/auth");
 const pool = require("../db/pool");
 const express = require("express");
 const router = express.Router();
+const axios = require("axios");
 
 async function sendTelegramAlert(message) {
     try {
-        const axios = require("axios");
 
         const token = process.env.TELEGRAM_SECURITY_BOT_TOKEN;
         const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -52,7 +52,7 @@ function abuseGuard(req, res, next) {
 
     if (now - last < 2000) {
 
-        sendTelegramAlert(`🚨 SPAM DETECTED: ${email || "UNKNOWN"}`);
+        sendTelegramAlert(`🚨 SPAM DETECTED: ${email}`);
 
         return res.status(429).json({
             error: "TOO_FAST_REQUEST"
