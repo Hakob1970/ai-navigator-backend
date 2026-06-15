@@ -471,7 +471,7 @@ app.get("/api/debug-jwt", (req, res) => {
   }
 });
 
-app.use("/api/auto-mechanic", apiLimiter, autoMechanicRoute);
+app.use("/api/auto-mechanic", apiLimiter, authMiddleware, autoMechanicRoute);
 
 // static в самом конце
 app.use(express.static(path.join(__dirname, "public")));
