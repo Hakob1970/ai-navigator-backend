@@ -1,19 +1,24 @@
 const express = require("express");
 const router = express.Router();
 
-const pool = req.app.locals.pool;
-
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
     try {
+
+        const pool = req.app.locals.pool;
 
         const { problem, car, year, vin } = req.body;
 
-        const email = req.user.email; // 👈 уже даёт authMiddleware
+        const email = req.user.email;
 
-        // 1. найти пользователя
-        const user = await db.users.findUnique({
-            where: { email }
-        });
+        // =========================
+        // 1. GET USER (POSTGRES)
+        // =========================
+        const userResult = await pool.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email]
+        );
+
+        const user = userResult.rows[0];
 
         if (!user || !user.auto_mechanic_premium) {
             return res.status(403).json({
@@ -21,7 +26,9 @@ router.post("/", async (req, res) => {
             });
         }
 
-        // 2. лимиты
+        // =========================
+        // 2. LIMIT CHECK
+        // =========================
         const used = user.auto_mechanic_used || 0;
         const limit = 50;
 
@@ -31,7 +38,9 @@ router.post("/", async (req, res) => {
             });
         }
 
-        // 3. prompt
+        // =========================
+        // 3. OPENROUTER PROMPT
+        // =========================
         const prompt = `
 You are an expert automotive mechanic AI.
 
@@ -71,15 +80,19 @@ Provide:
             });
         }
 
-        // 4. увеличить usage
-        await db.users.update({
-            where: { email },
-            data: {
-                auto_mechanic_used: used + 1
-            }
-        });
+        // =========================
+        // 4. UPDATE USAGE
+        // =========================
+        await pool.query(
+            `UPDATE users 
+             SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1 
+             WHERE email = $1`,
+            [email]
+        );
 
-        // 5. ответ
+        // =========================
+        // 5. RESPONSE
+        // =========================
         return res.json({
             result: data.choices[0].message.content,
             remaining: limit - (used + 1)
