@@ -83,20 +83,26 @@ Provide:
         // =========================
         // 4. UPDATE USAGE
         // =========================
-        await pool.query(
-            `UPDATE users 
-             SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1 
-             WHERE email = $1`,
-            [email]
-        );
+       // =========================
+// 4. ATOMIC UPDATE (SAFE)
+// =========================
+const updateResult = await pool.query(
+  `UPDATE users 
+   SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1 
+   WHERE email = $1
+   RETURNING auto_mechanic_used`,
+  [email]
+);
+
+const newUsed = updateResult.rows[0].auto_mechanic_used;
 
         // =========================
         // 5. RESPONSE
         // =========================
-        return res.json({
-            result: data.choices[0].message.content,
-            remaining: limit - (used + 1)
-        });
+     return res.json({
+  result: data.choices[0].message.content,
+  remaining: 50 - newUsed
+});
 
     } catch (err) {
         console.error("AUTO MECHANIC ERROR:", err);
