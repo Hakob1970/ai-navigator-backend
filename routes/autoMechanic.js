@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const pool = require("../server").pool;
+const pool = req.app.locals.pool;
 
 router.post("/", async (req, res) => {
     try {
