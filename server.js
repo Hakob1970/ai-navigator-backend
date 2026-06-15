@@ -79,6 +79,20 @@ setTimeout(async () => {
     `);
 
     await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    email TEXT PRIMARY KEY,
+
+    auto_mechanic_premium BOOLEAN DEFAULT FALSE,
+
+    auto_mechanic_used INTEGER DEFAULT 0,
+
+    auto_mechanic_reset_at BIGINT DEFAULT 0,
+
+    suspicious_hits INTEGER DEFAULT 0
+  );
+`);
+
+    await pool.query(`
       DELETE FROM user_devices
       WHERE last_seen < NOW() - INTERVAL '365 days'
     `);
