@@ -1,3 +1,5 @@
+const authMiddleware = require("../middleware/auth");
+const pool = require("../db/pool");
 const express = require("express");
 const router = express.Router();
 
