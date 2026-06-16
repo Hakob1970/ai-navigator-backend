@@ -95,7 +95,17 @@ if (user.is_blocked) {
 // =========================
 // 1. PREMIUM CHECK
 // =========================
-if (!user || !user.auto_mechanic_premium) {
+const premiumResult = await pool.query(
+    `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+    [email]
+);
+
+const row = premiumResult.rows[0];
+
+const now = Date.now();
+const premiumUntil = Number(row?.premium_until || 0);
+
+if (premiumUntil <= now) {
     return res.status(403).json({
         error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
     });
