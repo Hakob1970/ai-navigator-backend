@@ -1,38 +1,21 @@
-console.log("🔥 CLEAN SERVER START");
-
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
 const express = require("express");
-const axios = require("axios");
 const path = require("path");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
-const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const { checkDevice } = require("./utils/device");
-const authMiddleware = require("./middleware/auth");
-const pool = require("./db/pool");
+
 const autoMechanicRoute = require("./routes/autoMechanic");
-
-// ❌ REMOVED: creemRouter
-// const creemRouter = require("./creem");
-
-const polarRouter = require("./polar"); // 🟢 NEW
-
-console.log("🔥🔥🔥 VERSION MAY17 DEVICE FIX");
+const premiumRouter = require("./routes/premium");
+const polarRouter = require("./polar");
 
 const app = express();
 
 app.set("trust proxy", 1);
 
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 100,
-  standardHeaders: true,
-  legacyHeaders: false
-});
 // =========================
 // DB (POSTGRES)
 // =========================
@@ -362,6 +345,29 @@ await sendTelegramAlert(
 // =========================
 // NORMAL MIDDLEWARE (AFTER WEBHOOK)
 // =========================
+console.log("🔥 CLEAN SERVER START");
+
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
+
+const express = require("express");
+const path = require("path");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const jwt = require("jsonwebtoken");
+
+const autoMechanicRoute = require("./routes/autoMechanic");
+const premiumRouter = require("./routes/premium");
+const polarRouter = require("./polar");
+
+const app = express();
+
+app.set("trust proxy", 1);
+
+// =========================
+// GLOBAL MIDDLEWARE
+// =========================
 app.use(cors({
   origin: [
     "https://ai-navigator-frontend.vercel.app",
@@ -371,19 +377,41 @@ app.use(cors({
 
 app.use(express.json());
 
-app.use("/api/premium", apiLimiter);
-app.use("/api/device", apiLimiter);
-
-// 🔥 ЛОГИ СНАЧАЛА
+// =========================
+// LOGGING
+// =========================
 app.use((req, res, next) => {
   console.log("🌐 REQUEST:", req.method, req.url);
-  console.log("🔥 INCOMING:", req.method, req.url);
   next();
 });
 
-// 👉 ROUTES ПОТОМ
-app.use("/api/polar", polarRouter);
+// =========================
+// RATE LIMITER
+// =========================
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
+// =========================
+// APPLY RATE LIMIT (per route group)
+// =========================
+app.use("/api/premium", apiLimiter);
+app.use("/api/device", apiLimiter);
+app.use("/api/auto-mechanic", apiLimiter);
+
+// =========================
+// ROUTES
+// =========================
+app.use("/api/polar", polarRouter);
+app.use("/api", premiumRouter);
+app.use("/api/auto-mechanic", autoMechanicRoute);
+
+// =========================
+// TEST ROUTES
+// =========================
 app.get("/api/test-telegram", (req, res) => {
   res.json({
     ok: true,
@@ -391,6 +419,9 @@ app.get("/api/test-telegram", (req, res) => {
   });
 });
 
+// =========================
+// AUTH SESSION (JWT)
+// =========================
 app.post("/api/auth/session", async (req, res) => {
   try {
     const email = String(req.body.email || "")
@@ -414,10 +445,7 @@ app.post("/api/auth/session", async (req, res) => {
     const isPremium = premiumUntil > now;
 
     const token = jwt.sign(
-      {
-        email,
-        premium: isPremium
-      },
+      { email, premium: isPremium },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -433,6 +461,9 @@ app.post("/api/auth/session", async (req, res) => {
   }
 });
 
+// =========================
+// JWT DEBUG
+// =========================
 app.get("/api/debug-jwt", (req, res) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
 
@@ -456,11 +487,10 @@ app.get("/api/debug-jwt", (req, res) => {
   }
 });
 
-app.use("/api/auto-mechanic", apiLimiter, authMiddleware, autoMechanicRoute);
-
-// static в самом конце
+// =========================
+// STATIC FILES
+// =========================
 app.use(express.static(path.join(__dirname, "public")));
-
 
 
 
