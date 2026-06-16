@@ -102,7 +102,7 @@ const premiumResult = await pool.query(
 
 const row = premiumResult.rows[0];
 
-const now = Date.now();
+const currentTime = Date.now();
 const premiumUntil = Number(row?.premium_until || 0);
 
 if (premiumUntil <= now) {
