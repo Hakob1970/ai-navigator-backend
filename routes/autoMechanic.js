@@ -159,8 +159,13 @@ if (hits > 20) {
         // =========================
         // 3. OPENROUTER PROMPT
         // =========================
-        const prompt = `
+const prompt = `
 You are an expert automotive mechanic AI.
+
+IMPORTANT RULE:
+- Always respond in the same language as the user's message.
+- Detect the language automatically.
+- Do not translate or change language unless user requests it.
 
 Car: ${car}
 Year: ${year}
