@@ -510,69 +510,6 @@ async function isPremium(email) {
 }
 
 
-app.get("/api/likes", async (req, res) => {
-  try {
-
-    const count = await pool.query(`
-      SELECT COUNT(*) FROM site_likes
-    `);
-
-    return res.json({
-      likes: Number(count.rows[0].count)
-    });
-
-  } catch (err) {
-    console.error("❌ LIKES GET ERROR:", err);
-    return res.status(500).json({ likes: 0 });
-  }
-});
-
-
-app.post("/api/likes", async (req, res) => {
-  try {
-
-    const { email, deviceId } = req.body;
-
-    if (!email || !deviceId) {
-      return res.status(400).json({
-        error: "Missing data"
-      });
-    }
-
-    const cleanEmail = String(email).trim().toLowerCase();
-
-    // =========================
-    // try insert like (only once)
-    // =========================
-    const result = await pool.query(
-      `
-      INSERT INTO site_likes (email, device_id)
-      VALUES ($1, $2)
-      ON CONFLICT (email, device_id) DO NOTHING
-      RETURNING id
-      `,
-      [cleanEmail, deviceId]
-    );
-
-    // =========================
-    // count total likes
-    // =========================
-    const count = await pool.query(`
-      SELECT COUNT(*) FROM site_likes
-    `);
-
-    return res.json({
-      likes: Number(count.rows[0].count),
-      added: result.rowCount > 0
-    });
-
-  } catch (err) {
-    console.error("❌ LIKES ERROR:", err);
-    return res.status(500).json({ error: "Server error" });
-  }
-});
-
-
 // =========================
 // TELEGRAM PREMIUM LINK
 // =========================
