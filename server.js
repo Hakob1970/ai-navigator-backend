@@ -7,6 +7,7 @@ const path = require("path");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
+const pool = require("./db/pool");
 
 const autoMechanicRoute = require("./routes/autoMechanic");
 const deviceRouter = require("./routes/device");
