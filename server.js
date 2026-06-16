@@ -2,18 +2,30 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
+// =========================
+// CORE IMPORTS
+// =========================
 const express = require("express");
-const path = require("path");
 const cors = require("cors");
+const path = require("path");
 const rateLimit = require("express-rate-limit");
-const jwt = require("jsonwebtoken");
+
+// =========================
+// DATABASE
+// =========================
 const pool = require("./db/pool");
 
+// =========================
+// ROUTES
+// =========================
 const autoMechanicRoute = require("./routes/autoMechanic");
 const deviceRouter = require("./routes/device");
 const premiumRouter = require("./routes/premium");
 const polarRouter = require("./polar");
 
+// =========================
+// APP INIT
+// =========================
 const app = express();
 
 app.set("trust proxy", 1);
@@ -387,7 +399,8 @@ app.use("/api/auto-mechanic", apiLimiter);
 // ROUTES
 // =========================
 app.use("/api/polar", polarRouter);
-app.use("/api", premiumRouter);
+app.use("/api/premium", premiumRouter);
+app.use("/api/device", deviceRouter);
 app.use("/api/auto-mechanic", autoMechanicRoute);
 
 // =========================
