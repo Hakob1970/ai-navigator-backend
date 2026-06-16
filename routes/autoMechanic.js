@@ -72,13 +72,7 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
         const email = req.user.email;
 
         // =========================
-// BLOCK CHECK
-// =========================
-if (user.is_blocked) {
-    return res.status(403).json({
-        error: "USER_BLOCKED"
-    });
-}
+
 
         // =========================
         // 1. GET USER (POSTGRES)
@@ -89,6 +83,14 @@ if (user.is_blocked) {
         );
 
 const user = userResult.rows[0];
+
+        // BLOCK CHECK
+// =========================
+if (user.is_blocked) {
+    return res.status(403).json({
+        error: "USER_BLOCKED"
+    });
+}
 
 // =========================
 // 1. PREMIUM CHECK
