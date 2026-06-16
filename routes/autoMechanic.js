@@ -95,6 +95,8 @@ if (user.is_blocked) {
 // =========================
 // 1. PREMIUM CHECK
 // =========================
+const now = Date.now();
+        
 const premiumResult = await pool.query(
     `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
     [email]
@@ -102,7 +104,6 @@ const premiumResult = await pool.query(
 
 const row = premiumResult.rows[0];
 
-const currentTime = Date.now();
 const premiumUntil = Number(row?.premium_until || 0);
 
 if (premiumUntil <= now) {
@@ -114,7 +115,6 @@ if (premiumUntil <= now) {
 // =========================
 // 2. RESET LOGIC (30 DAYS)
 // =========================
-const now = Date.now();
 
 if (!user.auto_mechanic_reset_at || now > Number(user.auto_mechanic_reset_at)) {
     const resetAt = now + 30 * 24 * 60 * 60 * 1000;
