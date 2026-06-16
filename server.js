@@ -342,28 +342,7 @@ await sendTelegramAlert(
     }
   }
 );
-// =========================
-// NORMAL MIDDLEWARE (AFTER WEBHOOK)
-// =========================
-console.log("🔥 CLEAN SERVER START");
 
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
-
-const express = require("express");
-const path = require("path");
-const cors = require("cors");
-const rateLimit = require("express-rate-limit");
-const jwt = require("jsonwebtoken");
-
-const autoMechanicRoute = require("./routes/autoMechanic");
-const premiumRouter = require("./routes/premium");
-const polarRouter = require("./polar");
-
-const app = express();
-
-app.set("trust proxy", 1);
 
 // =========================
 // GLOBAL MIDDLEWARE
