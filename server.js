@@ -436,7 +436,7 @@ const attachUser = async (req, res, next) => {
 app.use("/api/polar", polarRouter);
 app.use("/api/premium", premiumRouter);
 app.use("/api/device", deviceRouter);
-app.use("/api/auto-mechanic", autoMechanicRoute);
+app.use("/api/auto-mechanic", authMiddleware, attachUser, autoMechanicRoute);
 
 // =========================
 // TEST ROUTES
