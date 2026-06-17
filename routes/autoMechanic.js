@@ -78,7 +78,7 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     // GET USER
     // =========================
 const userResult = await pool.query(
-  "SELECT * FROM users WHERE user_id = $1",
+  "SELECT suspicious_hits FROM users WHERE user_id = $1",
   [email]
 );
 
@@ -103,7 +103,7 @@ const userResult = await pool.query(
     const now = Date.now();
 
     const premiumResult = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE email = $1`,
+      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
       [email]
     );
 
