@@ -399,10 +399,11 @@ app.use("/api/auto-mechanic", apiLimiter);
 
 const attachUser = async (req, res, next) => {
   try {
-    const email = req.user?.email; 
-    // ⚠️ ВАЖНО: это должно приходить из JWT middleware
+    const email = req.user?.email;
 
-    if (!email) return next();
+    console.log("EMAIL FROM TOKEN:", email);
+
+    if (!email) return res.status(401).json({ error: "NO_EMAIL" });
 
     let result = await pool.query(
       "SELECT * FROM users WHERE email = $1",
@@ -411,10 +412,11 @@ const attachUser = async (req, res, next) => {
 
     let user = result.rows[0];
 
+    // 💥 ВАЖНО: AUTO CREATE
     if (!user) {
       const created = await pool.query(
-        `INSERT INTO users(email, created_at)
-         VALUES ($1, NOW())
+        `INSERT INTO users(email, suspicious_hits, auto_mechanic_used, is_blocked)
+         VALUES ($1, 0, 0, false)
          RETURNING *`,
         [email]
       );
@@ -422,12 +424,15 @@ const attachUser = async (req, res, next) => {
       user = created.rows[0];
     }
 
-    req.userDB = user; // 👈 ГЛАВНОЕ
+    req.userDB = user;
+
+    console.log("USER ROW:", user);
+
     next();
 
   } catch (err) {
-    console.error("USER RESOLVER ERROR:", err);
-    next(); // не ломаем запросы
+    console.error("attachUser error:", err);
+    res.status(500).json({ error: "USER_RESOLVER_ERROR" });
   }
 };
 
