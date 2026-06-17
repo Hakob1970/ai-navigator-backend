@@ -43,6 +43,8 @@ setInterval(() => {
 // =========================
 function abuseGuard(req, res, next) {
   const email = req.user?.email;
+
+  console.log("EMAIL FROM TOKEN:", email);
   if (!email) return next();
 
   const now = Date.now();
@@ -82,6 +84,8 @@ const userResult = await pool.query(
 
     const user = userResult.rows[0];
 
+    console.log("USER ROW:", user);
+
     if (!user) {
       return res.status(404).json({ error: "USER_NOT_FOUND" });
     }
@@ -104,6 +108,8 @@ const userResult = await pool.query(
     );
 
     const premiumRow = premiumResult.rows[0];
+
+    console.log("PREMIUM ROW:", premiumRow);
     const premiumUntil = Number(premiumRow?.premium_until || 0);
 
     if (premiumUntil <= now) {
@@ -160,6 +166,9 @@ Provide:
 - What to tell mechanic
 - What to avoid
 `;
+
+    console.log("OPENROUTER CALL START");
+console.log("PROMPT:", prompt);
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
