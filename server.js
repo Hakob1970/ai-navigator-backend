@@ -22,7 +22,7 @@ const autoMechanicRoute = require("./routes/autoMechanic");
 const deviceRouter = require("./routes/device");
 const premiumRouter = require("./routes/premium");
 const polarRouter = require("./polar");
-const authMiddleware = require("./middleware/authMiddleware");
+const authMiddleware = require("./middleware/auth");
 
 // =========================
 // APP INIT
