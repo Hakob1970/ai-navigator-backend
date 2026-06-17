@@ -395,6 +395,41 @@ app.use("/api/premium", apiLimiter);
 app.use("/api/device", apiLimiter);
 app.use("/api/auto-mechanic", apiLimiter);
 
+
+const attachUser = async (req, res, next) => {
+  try {
+    const email = req.user?.email; 
+    // ⚠️ ВАЖНО: это должно приходить из JWT middleware
+
+    if (!email) return next();
+
+    let result = await pool.query(
+      "SELECT * FROM users WHERE email = $1",
+      [email]
+    );
+
+    let user = result.rows[0];
+
+    if (!user) {
+      const created = await pool.query(
+        `INSERT INTO users(email, created_at)
+         VALUES ($1, NOW())
+         RETURNING *`,
+        [email]
+      );
+
+      user = created.rows[0];
+    }
+
+    req.userDB = user; // 👈 ГЛАВНОЕ
+    next();
+
+  } catch (err) {
+    console.error("USER RESOLVER ERROR:", err);
+    next(); // не ломаем запросы
+  }
+};
+
 // =========================
 // ROUTES
 // =========================
