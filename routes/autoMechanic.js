@@ -75,10 +75,10 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     // =========================
     // GET USER
     // =========================
-    const userResult = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+const userResult = await pool.query(
+  "SELECT * FROM users WHERE user_id = $1",
+  [email]
+);
 
     const user = userResult.rows[0];
 
@@ -128,7 +128,7 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     // ANTI ABUSE CHECK (DB)
     // =========================
     const suspiciousResult = await pool.query(
-      "SELECT suspicious_hits FROM users WHERE email = $1",
+      "SELECT suspicious_hits FROM users WHERE user_id = $1",
       [email]
     );
 
@@ -187,8 +187,8 @@ Provide:
     // =========================
     const updateResult = await pool.query(
       `UPDATE users 
-       SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1
-       WHERE email = $1
+SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1
+WHERE user_id = $1
        RETURNING auto_mechanic_used`,
       [email]
     );
