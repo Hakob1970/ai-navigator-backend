@@ -66,6 +66,10 @@ function abuseGuard(req, res, next) {
 // MAIN ROUTE
 // =========================
 router.post("/", authMiddleware, abuseGuard, async (req, res) => {
+
+  console.log("BODY:", req.body);
+  console.log("USER:", req.user);
+  
   try {
     const { problem, car, year, vin } = req.body;
     const email = req.user?.email;
