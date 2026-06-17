@@ -78,7 +78,7 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     // GET USER
     // =========================
 const userResult = await pool.query(
-  "SELECT suspicious_hits FROM users WHERE user_id = $1",
+  "SELECT * FROM users WHERE email = $1",
   [email]
 );
 
@@ -103,7 +103,7 @@ const userResult = await pool.query(
     const now = Date.now();
 
     const premiumResult = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
+      `SELECT premium_until FROM subscriptions WHERE email = $1`,
       [email]
     );
 
@@ -133,11 +133,17 @@ const userResult = await pool.query(
     // =========================
     // ANTI ABUSE CHECK (DB)
     // =========================
-   const hits = 0; // временно отключено DB anti-abuse
+    const hits = user.suspicious_hits || 0;
 
-if (false) {
-  // временно отключено
+if (hits > 20) {
+  await sendTelegramAlert(`🚨 USER FLAGGED: ${email}`);
+
+  return res.status(403).json({
+    error: "ACCOUNT_TEMP_BLOCKED"
+  });
 }
+
+
 
     // =========================
     // OPENROUTER
@@ -185,13 +191,13 @@ console.log("PROMPT:", prompt);
     // =========================
     // UPDATE USAGE
     // =========================
-    const updateResult = await pool.query(
-      `UPDATE users 
-SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1
-WHERE user_id = $1
-       RETURNING auto_mechanic_used`,
-      [email]
-    );
+const updateResult = await pool.query(
+  `UPDATE users 
+   SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1
+   WHERE email = $1
+   RETURNING auto_mechanic_used`,
+  [email]
+);
 
     const newUsed = updateResult.rows[0]?.auto_mechanic_used || 0;
 
