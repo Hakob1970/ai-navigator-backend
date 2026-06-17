@@ -413,16 +413,16 @@ const attachUser = async (req, res, next) => {
     let user = result.rows[0];
 
     // 💥 ВАЖНО: AUTO CREATE
-    if (!user) {
-      const created = await pool.query(
-        `INSERT INTO users(email, suspicious_hits, auto_mechanic_used, is_blocked)
-         VALUES ($1, 0, 0, false)
-         RETURNING *`,
-        [email]
-      );
+   if (!user) {
+  const created = await pool.query(
+    `INSERT INTO users(user_id, email, suspicious_hits, auto_mechanic_used, is_blocked)
+     VALUES ($1, $1, 0, 0, false)
+     RETURNING *`,
+    [email]
+  );
 
-      user = created.rows[0];
-    }
+  user = created.rows[0];
+}
 
     req.userDB = user;
 
