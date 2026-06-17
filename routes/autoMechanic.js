@@ -133,20 +133,11 @@ const userResult = await pool.query(
     // =========================
     // ANTI ABUSE CHECK (DB)
     // =========================
-    const suspiciousResult = await pool.query(
-      "SELECT suspicious_hits FROM users WHERE user_id = $1",
-      [email]
-    );
+   const hits = 0; // временно отключено DB anti-abuse
 
-    const hits = suspiciousResult.rows[0]?.suspicious_hits || 0;
-
-    if (hits > 20) {
-      await sendTelegramAlert(`🚨 USER FLAGGED: ${email}`);
-
-      return res.status(403).json({
-        error: "ACCOUNT_TEMP_BLOCKED"
-      });
-    }
+if (false) {
+  // временно отключено
+}
 
     // =========================
     // OPENROUTER
