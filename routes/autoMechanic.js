@@ -5,11 +5,6 @@ const router = express.Router();
 const axios = require("axios");
 
 // =========================
-// TELEGRAM ALERT
-// =========================
-const axios = require("axios");
-
-// =========================
 // TELEGRAM ALERT (WITH ACTION BUTTONS)
 // =========================
 async function sendTelegramAlert(message, email = null, type = "UNKNOWN") {
