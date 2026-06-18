@@ -24,6 +24,7 @@ const deviceRouter = require("./routes/device");
 const premiumRouter = require("./routes/premium");
 const polarRouter = require("./polar");
 const authMiddleware = require("./middleware/auth");
+const adminRouter = require("./routes/admin");
 
 // =========================
 // APP INIT
@@ -462,6 +463,7 @@ app.use("/api/polar", polarRouter);
 app.use("/api/premium", premiumRouter);
 app.use("/api/device", deviceRouter);
 app.use("/api/auto-mechanic", authMiddleware, attachUser, autoMechanicRoute);
+app.use("/api/admin", adminRouter);
 
 // =========================
 // TEST ROUTES
