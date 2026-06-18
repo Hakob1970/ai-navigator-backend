@@ -3,9 +3,9 @@ const router = express.Router();
 const pool = require("../db/pool");
 
 // =========================
-// SECURITY GUARD
+// ADMIN AUTH MIDDLEWARE
 // =========================
-router.use((req, res, next) => {
+function adminAuth(req, res, next) {
   const secret = req.query.secret;
   const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
@@ -14,12 +14,12 @@ router.use((req, res, next) => {
   }
 
   next();
-});
+}
 
 // =========================
 // BLOCK USER
 // =========================
-router.get("/block", async (req, res) => {
+router.get("/block", adminAuth, async (req, res) => {
   try {
     const email = req.query.email;
 
@@ -47,7 +47,7 @@ router.get("/block", async (req, res) => {
 // =========================
 // IGNORE USER
 // =========================
-router.get("/ignore", async (req, res) => {
+router.get("/ignore", adminAuth, async (req, res) => {
   try {
     const email = req.query.email;
 
