@@ -480,6 +480,16 @@ app.post("/api/auth/session", async (req, res) => {
 
     const isPremium = premiumUntil > now;
 
+    console.log("EMAIL:", email);
+
+console.log("DB ROW:", row);
+
+console.log("NOW:", now);
+
+console.log("PREMIUM UNTIL:", premiumUntil);
+
+console.log("IS PREMIUM:", isPremium);
+
     const token = jwt.sign(
       { email, premium: isPremium },
       process.env.JWT_SECRET,
