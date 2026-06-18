@@ -3,6 +3,20 @@ const router = express.Router();
 const pool = require("../db/pool");
 
 // =========================
+// SECURITY GUARD
+// =========================
+router.use((req, res, next) => {
+  const secret = req.query.secret;
+  const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+  if (!secret || secret !== ADMIN_SECRET) {
+    return res.status(403).send("FORBIDDEN");
+  }
+
+  next();
+});
+
+// =========================
 // BLOCK USER
 // =========================
 router.get("/block", async (req, res) => {
