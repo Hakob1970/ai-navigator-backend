@@ -106,14 +106,20 @@ setTimeout(async () => {
 }, 0);
 
 
-async function sendTelegramAlert(message, email) {
+async function sendTelegramAlert(message, email, type = "UNKNOWN") {
   try {
     const token = process.env.TELEGRAM_SECURITY_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
+    console.log("📩 ALERT DATA:", { message, email, type });
+
     if (!token || !chatId) {
-      console.log("Telegram not configured");
+      console.log("❌ Telegram not configured");
       return;
+    }
+
+    if (!email) {
+      console.log("❌ EMAIL IS UNDEFINED → buttons will NOT be created");
     }
 
     const SECRET = process.env.ADMIN_SECRET;
@@ -124,11 +130,10 @@ async function sendTelegramAlert(message, email) {
     const ignoreUrl =
       `https://ai-navigator-backend-mcb3.onrender.com/api/admin/ignore?email=${encodeURIComponent(email)}&secret=${SECRET}`;
 
-    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const payload = {
       chat_id: chatId,
-      text: message,
+      text: `🚨 <b>SECURITY ALERT</b>\n\n👤 User: ${email || "UNKNOWN"}\n⚠️ Type: ${type}\n\n${message}`,
       parse_mode: "HTML",
-
       reply_markup: {
         inline_keyboard: [
           [
@@ -143,10 +148,19 @@ async function sendTelegramAlert(message, email) {
           ]
         ]
       }
-    });
+    };
+
+    console.log("📤 TELEGRAM PAYLOAD:", JSON.stringify(payload, null, 2));
+
+    const response = await axios.post(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      payload
+    );
+
+    console.log("✅ TELEGRAM RESPONSE:", response.data);
 
   } catch (err) {
-    console.error("Telegram alert error:", err.message);
+    console.error("❌ Telegram alert error:", err.response?.data || err.message);
   }
 }
 
