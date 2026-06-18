@@ -7,19 +7,47 @@ const axios = require("axios");
 // =========================
 // TELEGRAM ALERT
 // =========================
-async function sendTelegramAlert(message) {
+const axios = require("axios");
+
+// =========================
+// TELEGRAM ALERT (WITH ACTION BUTTONS)
+// =========================
+async function sendTelegramAlert(message, email = null, type = "UNKNOWN") {
   try {
     const token = process.env.TELEGRAM_SECURITY_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) return;
 
+    let replyMarkup = undefined;
+
+    // кнопки только если есть email
+    if (email) {
+      const SECRET = process.env.ADMIN_SECRET;
+
+      const blockUrl = `https://ai-navigator-backend-mcb3.onrender.com/api/admin/block?email=${encodeURIComponent(email)}&secret=${SECRET}`;
+
+      const ignoreUrl = `https://ai-navigator-backend-mcb3.onrender.com/api/admin/ignore?email=${encodeURIComponent(email)}&secret=${SECRET}`;
+
+      replyMarkup = {
+        inline_keyboard: [
+          [
+            { text: "🚫 BLOCK", url: blockUrl },
+            { text: "🟢 IGNORE", url: ignoreUrl }
+          ]
+        ]
+      };
+    }
+
     await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
       chat_id: chatId,
-      text: message
+      text: `🚨 <b>SECURITY ALERT</b>\n\n👤 User: ${email || "UNKNOWN"}\n⚠️ Type: ${type}\n\n${message}`,
+      parse_mode: "HTML",
+      reply_markup: replyMarkup
     });
+
   } catch (err) {
-    console.error("Telegram error:", err.message);
+    console.error("Telegram error:", err.response?.data || err.message);
   }
 }
 
@@ -45,13 +73,19 @@ function abuseGuard(req, res, next) {
   const email = req.user?.email;
 
   console.log("EMAIL FROM TOKEN:", email);
+
   if (!email) return next();
 
   const now = Date.now();
   const last = userRateMap.get(email) || 0;
 
+  // rate limit
   if (now - last < 2000) {
-    sendTelegramAlert(`🚨 SPAM DETECTED: ${email}`);
+    sendTelegramAlert(
+      "🚨 Too many requests detected",
+      email,
+      "RATE_LIMIT"
+    );
 
     return res.status(429).json({
       error: "TOO_FAST_REQUEST"
@@ -61,6 +95,11 @@ function abuseGuard(req, res, next) {
   userRateMap.set(email, now);
   next();
 }
+
+module.exports = {
+  abuseGuard,
+  sendTelegramAlert
+};
 
 // =========================
 // MAIN ROUTE
