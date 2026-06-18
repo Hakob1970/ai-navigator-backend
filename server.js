@@ -105,7 +105,7 @@ setTimeout(async () => {
 }, 0);
 
 
-async function sendTelegramAlert(message) {
+async function sendTelegramAlert(message, email) {
   try {
     const token = process.env.TELEGRAM_SECURITY_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -115,10 +115,28 @@ async function sendTelegramAlert(message) {
       return;
     }
 
+    const blockUrl = `https://ai-navigator-backend-mcb3.onrender.com/api/admin/block?email=${encodeURIComponent(email)}`;
+    const ignoreUrl = `https://ai-navigator-backend-mcb3.onrender.com/api/admin/ignore?email=${encodeURIComponent(email)}`;
+
     await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
       chat_id: chatId,
       text: message,
-      parse_mode: "HTML"
+      parse_mode: "HTML",
+
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "🚫 BLOCK",
+              url: blockUrl
+            },
+            {
+              text: "🟢 IGNORE",
+              url: ignoreUrl
+            }
+          ]
+        ]
+      }
     });
 
   } catch (err) {
