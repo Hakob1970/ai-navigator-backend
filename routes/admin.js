@@ -32,7 +32,11 @@ router.get("/block", async (req, res) => {
       [email]
     );
 
-    return res.send(`USER BLOCKED: ${email}`);
+    return res.send(`
+      <h2 style="color:red;">🚫 USER BLOCKED</h2>
+      <p>${email}</p>
+      <a href="javascript:history.back()">← Go Back</a>
+    `);
 
   } catch (err) {
     console.error(err);
@@ -56,7 +60,11 @@ router.get("/ignore", async (req, res) => {
       [email]
     );
 
-    return res.send(`USER IGNORED: ${email}`);
+    return res.send(`
+      <h2 style="color:green;">🟢 USER IGNORED</h2>
+      <p>${email}</p>
+      <a href="javascript:history.back()">← Go Back</a>
+    `);
 
   } catch (err) {
     console.error(err);
