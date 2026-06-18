@@ -23,6 +23,8 @@ router.get("/block", adminAuth, async (req, res) => {
   try {
     const email = req.query.email;
 
+    console.log("🚫 BLOCK CALLED FOR:", email);
+
     if (!email) {
       return res.status(400).send("NO EMAIL");
     }
