@@ -303,8 +303,6 @@ if (exists.rowCount > 0) {
       const durationDays = 30;
       const resetAt = Date.now() + durationDays * 24 * 60 * 60 * 1000;
 
-      let requests_left = null;
-
   const PLAN_LIMITS = {
   "auto-mechanic-starter": 12,
   "auto-mechanic-premium": 30,
