@@ -240,9 +240,7 @@ try {
 
 } finally {
   clearTimeout(timeout);
-}
-
-  }   
+}   
 });
 
 module.exports = router;
