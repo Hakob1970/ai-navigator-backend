@@ -166,7 +166,7 @@ if (sub.requests_left <= 0) {
     const hits = user.suspicious_hits || 0;
 
 if (hits > 20) {
- await sendTelegramAlert(`🚨 USER FLAGGED`, email, "SUSPICIOUS_HITS");
+ await sendTelegramAlert("🚨 USER FLAGGED", email, "SUSPICIOUS_HITS");
 
   return res.status(403).json({
     error: "ACCOUNT_TEMP_BLOCKED"
@@ -186,7 +186,7 @@ Year: ${year}
 VIN: ${vin || "not provided"}
 Problem: ${problem}
 `;
-
+    
 try {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     signal: controller.signal,
