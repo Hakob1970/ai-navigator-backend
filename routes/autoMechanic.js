@@ -91,11 +91,6 @@ function abuseGuard(req, res, next) {
   next();
 }
 
-module.exports = {
-  abuseGuard,
-  sendTelegramAlert
-};
-
 // =========================
 // MAIN ROUTE
 // =========================
@@ -178,7 +173,6 @@ if (hits > 20) {
   });
 }
 
-
 // =========================
 // OPENROUTER
 // =========================
@@ -193,19 +187,22 @@ VIN: ${vin || "not provided"}
 Problem: ${problem}
 `;
 
-const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-  signal: controller.signal,
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    model: "openai/gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
+try {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    signal: controller.signal,
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://ai-navigator-backend-mcb3.onrender.com",
+      "X-Title": "AI Navigator Auto Mechanic"
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
 You are an expert automotive diagnostic AI (OBD-style mechanic assistant).
 
 You MUST respond in this exact structure:
@@ -237,77 +234,55 @@ Rules:
 - Focus on real mechanical reasoning
 - Do NOT ask questions back unless necessary
 `
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    temperature: 0.4
-  })
-});
-
-clearTimeout(timeout);
-
-    if (!response.ok) {
-  console.error("OpenRouter error status:", response.status);
-
-  return res.json({
-    result: "AI service error. Try again."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.4
+    })
   });
-}
 
-let data;
-try {
-  data = await response.json();
-} catch (err) {
-  console.error("OpenRouter JSON parse error:", err);
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("OpenRouter error:", response.status, errText);
 
-  return res.json({
-    result: "AI response format error. Try again."
-  });
-}
-
-// =========================
-// SAFETY CHECK
-// =========================
-if (!data.choices?.[0]?.message?.content) {
-  return res.json({
-    result: "AI temporarily unavailable. Try again."
-  });
-}
-
-const aiResult = data.choices?.[0]?.message?.content || "No AI response";
-
-// уменьшить запросы
-await pool.query(
-  `UPDATE subscriptions
-   SET requests_left = requests_left - 1
-   WHERE email = $1 AND module = $2`,
-  [email, "auto-mechanic"]
-);
-
-// получить новое количество
-const updatedSub = await pool.query(
-  `SELECT requests_left
-   FROM subscriptions
-   WHERE email = $1 AND module = $2`,
-  [email, "auto-mechanic"]
-);
-
-// ответ
-return res.json({
-  result: aiResult,
-  remaining: updatedSub.rows[0]?.requests_left ?? 0
-});
-
-  } catch (err) {
-    console.error("AUTO MECHANIC ERROR:", err);
-
-    return res.status(500).json({
-      error: "AI_ERROR"
+    return res.json({
+      result: "AI service error. Try again."
     });
   }
+
+  const data = await response.json();
+  const aiResult = data?.choices?.[0]?.message?.content;
+
+  if (!aiResult) {
+    return res.json({
+      result: "AI temporarily unavailable. Try again."
+    });
+  }
+
+  return res.json({
+    result: aiResult
+  });
+
+} catch (err) {
+  console.error("OPENROUTER ERROR:", err);
+
+  if (err.name === "AbortError") {
+    return res.status(504).json({
+      error: "AI_TIMEOUT"
+    });
+  }
+
+  return res.status(500).json({
+    error: "AI_ERROR"
+  });
+
+} finally {
+  clearTimeout(timeout);
+}
+
 });
 
 module.exports = router;
