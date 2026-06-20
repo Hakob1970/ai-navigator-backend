@@ -49,6 +49,26 @@ setTimeout(async () => {
     `);
 
     await pool.query(`
+  ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS module TEXT;
+`);
+
+await pool.query(`
+  ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'inactive';
+`);
+
+await pool.query(`
+  ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS requests_left INTEGER DEFAULT 0;
+`);
+
+await pool.query(`
+  ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS reset_at BIGINT DEFAULT 0;
+`);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS telegram_links (
         user_id TEXT PRIMARY KEY,
         telegram_id TEXT UNIQUE,
@@ -99,12 +119,6 @@ setTimeout(async () => {
 
     console.log("🧹 OLD DEVICES CLEANED");
     console.log("✅ DB READY");
-
-    const subs = await pool.query(
-  "SELECT * FROM subscriptions"
-);
-
-console.log("📦 SUBSCRIPTIONS:", subs.rows);
 
   } catch (err) {
     console.error("❌ DB INIT ERROR:", err);
