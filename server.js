@@ -320,40 +320,38 @@ app.post(
       // =========================
       // DURATION
       // =========================
-      const durationDays = 30;
-      const durationMs = durationDays * 24 * 60 * 60 * 1000;
+     const durationDays = 30;
+const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
-      const now = Date.now();
+const requests = 50;
+const resetAt = Date.now() + durationMs;
 
-      const sub = await pool.query(
-        `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-        [email]
-      );
-
-      const current = Number(sub.rows[0]?.premium_until || 0);
-      const base = Math.max(now, current);
-
-      let premiumUntil = base + durationMs;
-
-      const MAX_YEAR = 365 * 24 * 60 * 60 * 1000;
-      const maxAllowed = now + MAX_YEAR;
-
-      if (premiumUntil > maxAllowed) {
-        premiumUntil = maxAllowed;
-      }
-
-      // =========================
-      // SAVE SUBSCRIPTION
-      // =========================
-      await pool.query(
-        `
-        INSERT INTO subscriptions (user_id, premium_until)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id)
-        DO UPDATE SET premium_until = EXCLUDED.premium_until
-        `,
-        [email, premiumUntil]
-      );
+// =========================
+// SAVE SUBSCRIPTION (NEW SYSTEM)
+// =========================
+await pool.query(
+  `
+  INSERT INTO subscriptions (
+    email,
+    module,
+    status,
+    requests_left,
+    reset_at
+  )
+  VALUES ($1, $2, 'active', $3, $4)
+  ON CONFLICT (email, module)
+  DO UPDATE SET
+    status = 'active',
+    requests_left = $3,
+    reset_at = $4
+  `,
+  [
+    email,
+    "auto-mechanic",
+    requests,
+    resetAt
+  ]
+);
 
       // =========================
       // SAVE PAYMENT LOG
@@ -366,25 +364,17 @@ app.post(
 
       await pool.query(
         `
-        INSERT INTO payments (
-          user_id,
-          session_id,
-          provider,
-          payment_status,
-          amount,
-          duration_days,
-          premium_until
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+    INSERT INTO payments (
+  user_id,
+  session_id,
+  amount
+)
+VALUES ($1, $2, $3)
         `,
         [
-          email,
-          subscriptionId,
-          "polar",
-          "active",
-          amount,
-          durationDays,
-          premiumUntil
+           email,
+    subscriptionId,
+    amount
         ]
       );
 
