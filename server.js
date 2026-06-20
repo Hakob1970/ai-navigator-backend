@@ -250,14 +250,17 @@ const isValid = verifyPolarSignature(
       // =========================
       // MODULE (CRITICAL FIX)
       // =========================
-  const productId = data?.product_id || data?.productId;
 
-const moduleMap = {
-  "NAVIGATOR_PRODUCT_ID": "ai-navigator",
-  "MECHANIC_PRODUCT_ID": "auto-mechanic"
-};
+const module =
+  data?.metadata?.module ||
+  data?.product_metadata?.module ||
+  null;
 
-const module = moduleMap[productId];
+      if (!module) {
+  console.log("❌ No module in webhook");
+  return res.json({ received: true });
+}
+      
 
       // =========================
       // ONLY VALID EVENTS
@@ -283,15 +286,16 @@ const module = moduleMap[productId];
       // =========================
       // DUPLICATE CHECK
       // =========================
-      const exists = await pool.query(
-        `SELECT 1 FROM payments WHERE session_id = $1`,
-        [subscriptionId]
-      );
+     const eventId = String(data?.event?.id || data?.id || "");
 
-      if (exists.rowCount > 0) {
-        return res.json({ received: true });
-      }
+const exists = await pool.query(
+  `SELECT 1 FROM payments WHERE event_id = $1`,
+  [eventId]
+);
 
+if (exists.rowCount > 0) {
+  return res.json({ received: true });
+}
       // =========================
       // PLAN LOGIC (DIFFERENT PRODUCTS)
       // =========================
@@ -301,15 +305,13 @@ const module = moduleMap[productId];
 
       let requests_left = null;
 
-      // 🚗 Auto Mechanic = 50 credits
-      if (module === "auto-mechanic") {
-        requests_left = 50;
-      }
+  const PLAN_LIMITS = {
+  "auto-mechanic-starter": 12,
+  "auto-mechanic-premium": 30,
+  "ai-navigator": null
+};
 
-      // 🧭 Navigator = NO LIMIT (time only)
-      if (module === "ai-navigator") {
-        requests_left = null;
-      }
+const requests_left = PLAN_LIMITS[module] ?? null;
 
       // =========================
       // SAVE SUBSCRIPTION (UNIVERSAL)
