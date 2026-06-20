@@ -242,6 +242,7 @@ try {
   clearTimeout(timeout);
 }
 
+  }   
 });
 
 module.exports = router;
