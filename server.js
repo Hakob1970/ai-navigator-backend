@@ -100,6 +100,12 @@ setTimeout(async () => {
     console.log("🧹 OLD DEVICES CLEANED");
     console.log("✅ DB READY");
 
+    const subs = await pool.query(
+  "SELECT * FROM subscriptions"
+);
+
+console.log("📦 SUBSCRIPTIONS:", subs.rows);
+
   } catch (err) {
     console.error("❌ DB INIT ERROR:", err);
   }
