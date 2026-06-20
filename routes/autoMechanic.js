@@ -138,35 +138,32 @@ const userResult = await pool.query(
     // =========================
     // PREMIUM CHECK (CLEAN)
     // =========================
-    const now = Date.now();
 
-    const premiumResult = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE email = $1`,
-      [email]
-    );
+const subResult = await pool.query(
+  `SELECT * FROM subscriptions WHERE email = $1 AND module = $2`,
+  [email, "auto-mechanic"]
+);
 
-    const premiumRow = premiumResult.rows[0];
+const sub = subResult.rows[0];
 
-    console.log("PREMIUM ROW:", premiumRow);
-    const premiumUntil = Number(premiumRow?.premium_until || 0);
+if (!sub) {
+  return res.status(403).json({
+    error: "NO_SUBSCRIPTION"
+  });
+}
 
-    if (premiumUntil <= now) {
-      return res.status(403).json({
-        error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
-      });
-    }
+if (sub.status !== "active") {
+  return res.status(403).json({
+    error: "AUTO_MECHANIC_PREMIUM_REQUIRED"
+  });
+}
 
-    // =========================
-    // LIMIT CHECK (fallback safe)
-    // =========================
-    const used = user.auto_mechanic_used || 0;
-    const limit = 50;
+if (sub.requests_left <= 0) {
+  return res.status(403).json({
+    error: "NO_REQUESTS_LEFT"
+  });
+}
 
-    if (used >= limit) {
-      return res.status(403).json({
-        error: "MONTHLY_LIMIT_REACHED"
-      });
-    }
 
     // =========================
     // ANTI ABUSE CHECK (DB)
@@ -281,26 +278,27 @@ if (!data.choices?.[0]?.message?.content) {
 }
 
 const aiResult = data.choices?.[0]?.message?.content || "No AI response";
-  
-    // =========================
-    // UPDATE USAGE
-    // =========================
-const updateResult = await pool.query(
-  `UPDATE users 
-   SET auto_mechanic_used = COALESCE(auto_mechanic_used, 0) + 1
-   WHERE email = $1
-   RETURNING auto_mechanic_used`,
-  [email]
+
+// уменьшить запросы
+await pool.query(
+  `UPDATE subscriptions
+   SET requests_left = requests_left - 1
+   WHERE email = $1 AND module = $2`,
+  [email, "auto-mechanic"]
 );
 
-    const newUsed = updateResult.rows[0]?.auto_mechanic_used || 0;
+// получить новое количество
+const updatedSub = await pool.query(
+  `SELECT requests_left
+   FROM subscriptions
+   WHERE email = $1 AND module = $2`,
+  [email, "auto-mechanic"]
+);
 
-    // =========================
-    // RESPONSE
-    // =========================
- return res.json({
+// ответ
+return res.json({
   result: aiResult,
-  remaining: Math.max(0, limit - newUsed)
+  remaining: updatedSub.rows[0]?.requests_left ?? 0
 });
 
   } catch (err) {
