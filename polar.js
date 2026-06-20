@@ -27,15 +27,15 @@ router.post("/create-checkout", async (req, res) => {
     // PRODUCTS
     // =========================
 
-    const PRODUCT_IDS = {
-      "ai-navigator": process.env.POLAR_NAVIGATOR_PRODUCT_ID,
+  const PRODUCT_IDS = {
+  "ai-navigator": process.env.POLAR_PRODUCT_ID,
 
-      "auto-mechanic-starter":
-        process.env.POLAR_MECHANIC_STARTER_PRODUCT_ID,
+  "auto-mechanic-starter":
+    process.env.POLAR_MECHANIC_STARTER_PRODUCT_ID,
 
-      "auto-mechanic-premium":
-        process.env.POLAR_MECHANIC_PREMIUM_PRODUCT_ID
-    };
+  "auto-mechanic-premium":
+    process.env.POLAR_MECHANIC_PREMIUM_PRODUCT_ID
+};
 
     const productId = PRODUCT_IDS[module];
 
