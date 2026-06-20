@@ -202,38 +202,7 @@ try {
       messages: [
         {
           role: "system",
-          content: `
-You are an expert automotive diagnostic AI (OBD-style mechanic assistant).
-
-You MUST respond in this exact structure:
-
-📊 DIAGNOSTIC REPORT (OBD STYLE)
-
-🔍 Symptom analysis:
-- Identify what the user is experiencing
-
-⚠️ Possible causes (ranked):
-- Most likely cause
-- Secondary cause
-- Less likely cause
-
-🧪 Diagnosis steps:
-- Step-by-step checks to confirm the issue
-
-🛠 Repair instructions:
-1. First action
-2. Next action
-3. Final fix
-
-💡 Mechanic advice:
-- Practical professional recommendation
-
-Rules:
-- Be precise and practical
-- No vague answers
-- Focus on real mechanical reasoning
-- Do NOT ask questions back unless necessary
-`
+          content: `...`
         },
         {
           role: "user",
@@ -256,28 +225,18 @@ Rules:
   const data = await response.json();
   const aiResult = data?.choices?.[0]?.message?.content;
 
-  if (!aiResult) {
-    return res.json({
-      result: "AI temporarily unavailable. Try again."
-    });
-  }
-
   return res.json({
-    result: aiResult
+    result: aiResult || "AI temporarily unavailable"
   });
 
 } catch (err) {
   console.error("OPENROUTER ERROR:", err);
 
   if (err.name === "AbortError") {
-    return res.status(504).json({
-      error: "AI_TIMEOUT"
-    });
+    return res.status(504).json({ error: "AI_TIMEOUT" });
   }
 
-  return res.status(500).json({
-    error: "AI_ERROR"
-  });
+  return res.status(500).json({ error: "AI_ERROR" });
 
 } finally {
   clearTimeout(timeout);
