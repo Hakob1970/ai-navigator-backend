@@ -210,11 +210,13 @@ app.post(
         req.headers["polar-signature"] ||
         req.headers["x-polar-signature"];
 
-      const isValid = verifyPolarSignature(
-        req.body,
-        signature,
-        process.env.POLAR_WEBHOOK_SECRET
-      );
+    const rawBody = req.body;
+
+const isValid = verifyPolarSignature(
+  rawBody,
+  signature,
+  process.env.POLAR_WEBHOOK_SECRET
+);
 
       if (!isValid) {
         return res.status(401).json({ error: "Invalid signature" });
@@ -248,10 +250,14 @@ app.post(
       // =========================
       // MODULE (CRITICAL FIX)
       // =========================
-      const module =
-        data?.metadata?.module ||
-        data?.product ||
-        "ai-navigator";
+  const productId = data?.product_id || data?.productId;
+
+const moduleMap = {
+  "NAVIGATOR_PRODUCT_ID": "ai-navigator",
+  "MECHANIC_PRODUCT_ID": "auto-mechanic"
+};
+
+const module = moduleMap[productId];
 
       // =========================
       // ONLY VALID EVENTS
