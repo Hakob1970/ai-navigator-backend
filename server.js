@@ -204,43 +204,25 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      console.log("🔥 POLAR WEBHOOK HIT");
+      console.log("🔥 POLAR WEBHOOK V2 HIT");
 
       const signature =
         req.headers["polar-signature"] ||
         req.headers["x-polar-signature"];
 
-      const rawBody = req.body;
-
-      // 🔐 VERIFY SIGNATURE (ВАЖНО)
       const isValid = verifyPolarSignature(
-        rawBody,
+        req.body,
         signature,
         process.env.POLAR_WEBHOOK_SECRET
       );
 
       if (!isValid) {
-  console.log("🚨 INVALID POLAR WEBHOOK SIGNATURE");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
 
-  await sendTelegramAlert(
-    `🚨 <b>SECURITY ALERT</b>\n` +
-    `Invalid webhook signature\n` +
-    `IP: ${req.ip}\n` +
-    `Time: ${new Date().toISOString()}`
-  );
-
-  return res.status(401).json({ error: "Invalid signature" });
-}
-
-      // =========================
-      // PARSE BODY
-      // =========================
-      const body = JSON.parse(rawBody.toString());
+      const body = JSON.parse(req.body.toString());
 
       const eventType = body?.eventType || body?.type;
-
-      console.log("EVENT:", eventType);
-
       const data = body?.data || body?.object || body;
 
       if (!data) {
@@ -261,21 +243,18 @@ app.post(
         .trim()
         .toLowerCase();
 
-    if (!email) {
-  console.log("❌ No email from Polar");
-
-  await sendTelegramAlert(
-    `⚠️ <b>WEBHOOK WARNING</b>\n` +
-    `Missing email from Polar\n` +
-    `Event: ${eventType}\n` +
-    `Time: ${new Date().toISOString()}`
-  );
-
-  return res.json({ received: true });
-}
+      if (!email) return res.json({ received: true });
 
       // =========================
-      // ONLY SUBSCRIPTION EVENTS
+      // MODULE (CRITICAL FIX)
+      // =========================
+      const module =
+        data?.metadata?.module ||
+        data?.product ||
+        "ai-navigator";
+
+      // =========================
+      // ONLY VALID EVENTS
       // =========================
       const allowedEvents = [
         "subscription.created",
@@ -287,9 +266,6 @@ app.post(
         return res.json({ received: true });
       }
 
-      // =========================
-      // SUBSCRIPTION ID
-      // =========================
       const subscriptionId = String(
         data?.id || data?.subscription_id || ""
       );
@@ -306,55 +282,53 @@ app.post(
         [subscriptionId]
       );
 
-     if (exists.rowCount > 0) {
-
-  await sendTelegramAlert(
-    `🔁 <b>DUPLICATE WEBHOOK</b>\n` +
-    `User: ${email}\n` +
-    `Subscription: ${subscriptionId}`
-  );
-
-  return res.json({ received: true });
-}
+      if (exists.rowCount > 0) {
+        return res.json({ received: true });
+      }
 
       // =========================
-      // DURATION
+      // PLAN LOGIC (DIFFERENT PRODUCTS)
       // =========================
-     const durationDays = 30;
-const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
-const requests = 50;
-const resetAt = Date.now() + durationMs;
+      const durationDays = 30;
+      const resetAt = Date.now() + durationDays * 24 * 60 * 60 * 1000;
 
-// =========================
-// SAVE SUBSCRIPTION (NEW SYSTEM)
-// =========================
-await pool.query(
-  `
-  INSERT INTO subscriptions (
-    email,
-    module,
-    status,
-    requests_left,
-    reset_at
-  )
-  VALUES ($1, $2, 'active', $3, $4)
-  ON CONFLICT (email, module)
-  DO UPDATE SET
-    status = 'active',
-    requests_left = $3,
-    reset_at = $4
-  `,
-  [
-    email,
-    "auto-mechanic",
-    requests,
-    resetAt
-  ]
-);
+      let requests_left = null;
+
+      // 🚗 Auto Mechanic = 50 credits
+      if (module === "auto-mechanic") {
+        requests_left = 50;
+      }
+
+      // 🧭 Navigator = NO LIMIT (time only)
+      if (module === "ai-navigator") {
+        requests_left = null;
+      }
 
       // =========================
-      // SAVE PAYMENT LOG
+      // SAVE SUBSCRIPTION (UNIVERSAL)
+      // =========================
+      await pool.query(
+        `
+        INSERT INTO subscriptions (
+          email,
+          module,
+          status,
+          requests_left,
+          reset_at
+        )
+        VALUES ($1, $2, 'active', $3, $4)
+        ON CONFLICT (email, module)
+        DO UPDATE SET
+          status = 'active',
+          requests_left = $3,
+          reset_at = $4
+        `,
+        [email, module, requests_left, resetAt]
+      );
+
+      // =========================
+      // PAYMENT LOG (SIMPLE)
       // =========================
       const amount =
         data?.total_amount ||
@@ -364,39 +338,17 @@ await pool.query(
 
       await pool.query(
         `
-    INSERT INTO payments (
-  user_id,
-  session_id,
-  amount
-)
-VALUES ($1, $2, $3)
+        INSERT INTO payments (
+          user_id,
+          session_id,
+          amount
+        )
+        VALUES ($1, $2, $3)
         `,
-        [
-           email,
-    subscriptionId,
-    amount
-        ]
+        [email, subscriptionId, amount]
       );
 
-      console.log("💰 PREMIUM ACTIVATED:", email);
-
-      const token = jwt.sign(
-  {
-    email: email,
-    deviceId: "auto",
-    premium: true
-  },
-  process.env.JWT_SECRET,
-  { expiresIn: "7d" }
-);
-
-await sendTelegramAlert(
-  `💰 <b>PAYMENT SUCCESS</b>\n` +
-  `User: ${email}\n` +
-  `Plan: Polar subscription\n` +
-  `Until: ${new Date(premiumUntil).toISOString()}\n\n` +
-  `🔐 JWT TEST:\n${token}`
-);
+      console.log("💰 SUBSCRIPTION ACTIVATED:", email, module);
 
       return res.json({ success: true });
 
