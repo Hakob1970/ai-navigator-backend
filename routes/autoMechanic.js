@@ -166,7 +166,7 @@ if (sub.requests_left <= 0) {
     const hits = user.suspicious_hits || 0;
 
 if (hits > 20) {
-  await sendTelegramAlert(`🚨 USER FLAGGED: ${email}`);
+ await sendTelegramAlert(`🚨 USER FLAGGED`, email, "SUSPICIOUS_HITS");
 
   return res.status(403).json({
     error: "ACCOUNT_TEMP_BLOCKED"
@@ -240,7 +240,9 @@ try {
 
 } finally {
   clearTimeout(timeout);
-}   
-});
+}
+
+  } // <-- закрывает блок try
+}); // <-- ТЕПЕРЬ это правильно закрывает роутер router.post("/", ...)
 
 module.exports = router;
