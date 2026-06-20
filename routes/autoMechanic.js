@@ -182,50 +182,106 @@ if (hits > 20) {
 }
 
 
+// =========================
+// OPENROUTER
+// =========================
 
-    // =========================
-    // OPENROUTER
-    // =========================
-    const prompt = `
-You are an expert automotive mechanic AI.
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 25000);
 
+const prompt = `
 Car: ${car}
 Year: ${year}
 VIN: ${vin || "not provided"}
 Problem: ${problem}
-
-Provide:
-- Possible causes (ranked)
-- Diagnosis steps
-- Repair advice
-- What to tell mechanic
-- What to avoid
 `;
 
-    console.log("OPENROUTER CALL START");
-console.log("PROMPT:", prompt);
+const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  signal: controller.signal,
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    model: "openai/gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `
+You are an expert automotive diagnostic AI (OBD-style mechanic assistant).
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
+You MUST respond in this exact structure:
+
+📊 DIAGNOSTIC REPORT (OBD STYLE)
+
+🔍 Symptom analysis:
+- Identify what the user is experiencing
+
+⚠️ Possible causes (ranked):
+- Most likely cause
+- Secondary cause
+- Less likely cause
+
+🧪 Diagnosis steps:
+- Step-by-step checks to confirm the issue
+
+🛠 Repair instructions:
+1. First action
+2. Next action
+3. Final fix
+
+💡 Mechanic advice:
+- Practical professional recommendation
+
+Rules:
+- Be precise and practical
+- No vague answers
+- Focus on real mechanical reasoning
+- Do NOT ask questions back unless necessary
+`
       },
-      body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a professional mechanic assistant." },
-          { role: "user", content: prompt }
-        ]
-      })
-    });
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    temperature: 0.4
+  })
+});
 
-    const data = await response.json();
+clearTimeout(timeout);
 
-    if (!data.choices?.[0]) {
-      return res.json({ result: "AI temporarily unavailable" });
-    }
+    if (!response.ok) {
+  console.error("OpenRouter error status:", response.status);
 
+  return res.json({
+    result: "AI service error. Try again."
+  });
+}
+
+let data;
+try {
+  data = await response.json();
+} catch (err) {
+  console.error("OpenRouter JSON parse error:", err);
+
+  return res.json({
+    result: "AI response format error. Try again."
+  });
+}
+
+// =========================
+// SAFETY CHECK
+// =========================
+if (!data.choices?.[0]?.message?.content) {
+  return res.json({
+    result: "AI temporarily unavailable. Try again."
+  });
+}
+
+const aiResult = data.choices?.[0]?.message?.content || "No AI response";
+  
     // =========================
     // UPDATE USAGE
     // =========================
@@ -242,10 +298,10 @@ const updateResult = await pool.query(
     // =========================
     // RESPONSE
     // =========================
-    return res.json({
-      result: data.choices[0].message.content,
-      remaining: Math.max(0, limit - newUsed)
-    });
+ return res.json({
+  result: aiResult,
+  remaining: Math.max(0, limit - newUsed)
+});
 
   } catch (err) {
     console.error("AUTO MECHANIC ERROR:", err);
