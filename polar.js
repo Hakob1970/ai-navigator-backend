@@ -9,24 +9,56 @@ router.post("/create-checkout", async (req, res) => {
       .trim()
       .toLowerCase();
 
+    const module = String(req.body.module || "");
+
     if (!email) {
       return res.status(400).json({ error: "No email" });
     }
 
+    if (!module) {
+      return res.status(400).json({ error: "No module" });
+    }
+
     console.log("🚀 POLAR CHECKOUT START");
     console.log("EMAIL:", email);
+    console.log("MODULE:", module);
 
-    // 💎 ВСЕГДА ОДИН ПРОДУКТ (SUBSCRIPTION)
-    const productId = process.env.POLAR_PRODUCT_ID;
+    // =========================
+    // PRODUCTS
+    // =========================
+
+    const PRODUCT_IDS = {
+      "ai-navigator": process.env.POLAR_NAVIGATOR_PRODUCT_ID,
+
+      "auto-mechanic-starter":
+        process.env.POLAR_MECHANIC_STARTER_PRODUCT_ID,
+
+      "auto-mechanic-premium":
+        process.env.POLAR_MECHANIC_PREMIUM_PRODUCT_ID
+    };
+
+    const productId = PRODUCT_IDS[module];
+
+    if (!productId) {
+      return res.status(400).json({
+        error: "Invalid module"
+      });
+    }
+
+    // =========================
+    // CREATE CHECKOUT
+    // =========================
 
     const response = await axios.post(
       "https://api.polar.sh/v1/checkouts",
       {
         product_id: productId,
+
         success_url: process.env.POLAR_SUCCESS_URL,
 
         metadata: {
-          email
+          email,
+          module
         }
       },
       {
@@ -38,12 +70,14 @@ router.post("/create-checkout", async (req, res) => {
     );
 
     console.log("✅ POLAR SUCCESS");
+
     console.log("💳 CHECKOUT CREATED", {
-  provider: "polar",
-  email,
-  productId,
-  time: Date.now()
-});
+      provider: "polar",
+      email,
+      module,
+      productId,
+      time: Date.now()
+    });
 
     return res.json({
       url: response.data.url
@@ -51,8 +85,12 @@ router.post("/create-checkout", async (req, res) => {
 
   } catch (err) {
     console.error("❌ POLAR ERROR:");
+
     console.error(err?.response?.status);
-    console.error(err?.response?.data || err.message);
+
+    console.error(
+      err?.response?.data || err.message
+    );
 
     return res.status(500).json({
       error: "Polar checkout failed"
