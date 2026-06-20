@@ -241,8 +241,6 @@ try {
 } finally {
   clearTimeout(timeout);
 }
-
-  } // <-- закрывает блок try
-}); // <-- ТЕПЕРЬ это правильно закрывает роутер router.post("/", ...)
+}); 
 
 module.exports = router;
