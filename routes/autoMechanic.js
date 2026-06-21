@@ -92,29 +92,14 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
       return res.status(401).json({ error: "NO_USER" });
     }
 
-    // GET USER
-    const userResult = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
-    const user = userResult.rows[0];
-    console.log("USER ROW:", user);
-
-    if (!user) {
-      return res.status(404).json({ error: "USER_NOT_FOUND" });
-    }
-
-    if (user.is_blocked) {
-      return res.status(403).json({ error: "USER_BLOCKED" });
-    }
-
-    // PREMIUM CHECK
-  const userResult = await pool.query(
+const userResult = await pool.query(
   "SELECT * FROM users WHERE email = $1",
   [email]
 );
 
 const user = userResult.rows[0];
+
+console.log("USER ROW:", user);
 
 if (!user) {
   return res.status(404).json({ error: "USER_NOT_FOUND" });
