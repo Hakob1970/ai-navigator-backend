@@ -109,8 +109,23 @@ if (user.is_blocked) {
   return res.status(403).json({ error: "USER_BLOCKED" });
 }
 
-if (!user.premium) {
+const subResult = await pool.query(
+  `SELECT * FROM subscriptions WHERE email = $1 AND module = $2`,
+  [email, "auto-mechanic"]
+);
+
+const sub = subResult.rows[0];
+
+if (!sub) {
   return res.status(403).json({ error: "NO_SUBSCRIPTION" });
+}
+
+if (sub.status !== "active") {
+  return res.status(403).json({ error: "AUTO_MECHANIC_PREMIUM_REQUIRED" });
+}
+
+if (sub.requests_left <= 0) {
+  return res.status(403).json({ error: "NO_REQUESTS_LEFT" });
 }
 
     // ANTI ABUSE CHECK
