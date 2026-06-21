@@ -153,16 +153,32 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
         body: JSON.stringify({
           model: "openai/gpt-4o-mini",
           messages: [
-            {
-              role: "system",
-              content: "You are a professional auto mechanic assistant."
-            },
+          {
+  role: "system",
+  content: `
+You are a professional automotive diagnostic system.
+
+RULES:
+- Do NOT guess randomly.
+- If information is insufficient, say "Insufficient data".
+- Use only logical cause-effect reasoning.
+- Provide structured output.
+
+OUTPUT FORMAT:
+1. Most likely cause
+2. Secondary possible causes
+3. Recommended checks
+4. Suggested fix
+
+Be precise and consistent.
+`
+},
             {
               role: "user",
               content: prompt
             }
           ],
-          temperature: 0.4
+          temperature: 0.1
         })
       });
 
