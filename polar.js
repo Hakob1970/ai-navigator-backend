@@ -28,7 +28,6 @@ router.post("/create-checkout", async (req, res) => {
     // =========================
 
   const PRODUCT_IDS = {
-const PRODUCT_IDS = {
   "ai-navigator": process.env.POLAR_PRODUCT_ID,
 
   "auto-mechanic":
