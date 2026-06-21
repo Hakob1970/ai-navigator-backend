@@ -231,6 +231,9 @@ app.post(
         return res.status(400).json({ error: "No data" });
       }
 
+      // =========================
+      // EMAIL
+      // =========================
       const email = decodeURIComponent(
         String(
           data?.customer?.email ||
@@ -238,11 +241,28 @@ app.post(
           data?.metadata?.email ||
           ""
         )
-      ).trim().toLowerCase();
+      )
+        .trim()
+        .toLowerCase();
 
       if (!email) return res.json({ received: true });
 
-      // ONLY SUCCESS EVENTS
+      // =========================
+      // MODULE (IMPORTANT)
+      // =========================
+      const module =
+        data?.metadata?.module ||
+        data?.product_metadata?.module ||
+        null;
+
+      if (!module) {
+        console.log("❌ No module in webhook");
+        return res.json({ received: true });
+      }
+
+      // =========================
+      // ONLY VALID EVENTS
+      // =========================
       const allowedEvents = [
         "subscription.created",
         "subscription.active",
@@ -261,17 +281,59 @@ app.post(
         return res.json({ received: true });
       }
 
-      // 💥 SINGLE ACTION: ACTIVATE PREMIUM
-      await pool.query(
-        `
-        UPDATE users
-        SET premium = true
-        WHERE email = $1
-        `,
-        [email]
+      // =========================
+      // DUPLICATE CHECK
+      // =========================
+      const eventId = String(data?.event?.id || data?.id || "");
+
+      const exists = await pool.query(
+        `SELECT 1 FROM payments WHERE event_id = $1`,
+        [eventId]
       );
 
-      // PAYMENT LOG (optional but safe)
+      if (exists.rowCount > 0) {
+        return res.json({ received: true });
+      }
+
+      // =========================
+      // PLAN LOGIC
+      // =========================
+      const durationDays = 30;
+      const resetAt = Date.now() + durationDays * 24 * 60 * 60 * 1000;
+
+      const PLAN_LIMITS = {
+        "auto-mechanic": 20,
+        "ai-book": 5,
+        "ai-navigator": null
+      };
+
+      const requests_left = PLAN_LIMITS[module] ?? null;
+
+      // =========================
+      // SAVE SUBSCRIPTION
+      // =========================
+      await pool.query(
+        `
+        INSERT INTO subscriptions (
+          email,
+          module,
+          status,
+          requests_left,
+          reset_at
+        )
+        VALUES ($1, $2, 'active', $3, $4)
+        ON CONFLICT (email, module)
+        DO UPDATE SET
+          status = 'active',
+          requests_left = $3,
+          reset_at = $4
+        `,
+        [email, module, requests_left, resetAt]
+      );
+
+      // =========================
+      // PAYMENT LOG
+      // =========================
       const amount =
         data?.total_amount ||
         data?.amount ||
@@ -280,13 +342,17 @@ app.post(
 
       await pool.query(
         `
-        INSERT INTO payments (user_id, session_id, amount)
+        INSERT INTO payments (
+          user_id,
+          session_id,
+          amount
+        )
         VALUES ($1, $2, $3)
         `,
         [email, subscriptionId, amount]
       );
 
-      console.log("💰 PREMIUM ACTIVATED:", email);
+      console.log("💰 SUBSCRIPTION ACTIVATED:", email, module);
 
       return res.json({ success: true });
 
@@ -296,7 +362,6 @@ app.post(
     }
   }
 );
-
 // =========================
 // GLOBAL MIDDLEWARE
 // =========================
