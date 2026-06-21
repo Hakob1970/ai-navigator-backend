@@ -49,25 +49,25 @@ router.post("/create-checkout", async (req, res) => {
     // CREATE CHECKOUT
     // =========================
 
-    const response = await axios.post(
-      "https://api.polar.sh/v1/checkouts",
-      {
-        product_id: productId,
+   const response = await axios.post(
+  "https://api.polar.sh/v1/checkouts",
+  {
+    products: [productId],   // ✅ FIX
 
-        success_url: process.env.POLAR_SUCCESS_URL,
+    success_url: process.env.POLAR_SUCCESS_URL,
 
-        metadata: {
-          email,
-          module
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.POLAR_ACCESS_TOKEN}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    metadata: {
+      email,
+      module
+    }
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${process.env.POLAR_ACCESS_TOKEN}`,
+      "Content-Type": "application/json"
+    }
+  }
+);
 
     console.log("✅ POLAR SUCCESS");
 
