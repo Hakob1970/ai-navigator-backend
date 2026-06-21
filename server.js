@@ -284,7 +284,12 @@ app.post(
       // =========================
       // DUPLICATE CHECK
       // =========================
-      const eventId = String(data?.event?.id || data?.id || "");
+      const eventId = String(body?.id || body?.event_id || data?.event?.id || "");
+
+      if (!eventId) {
+  console.log("❌ Missing eventId → skip");
+  return res.json({ received: true });
+}
 
       const exists = await pool.query(
         `SELECT 1 FROM payments WHERE event_id = $1`,
@@ -339,18 +344,20 @@ app.post(
         data?.amount ||
         data?.price ||
         0;
-
-      await pool.query(
-        `
-        INSERT INTO payments (
-          user_id,
-          session_id,
-          amount
-        )
-        VALUES ($1, $2, $3)
-        `,
-        [email, subscriptionId, amount]
-      );
+      
+await pool.query(
+  `
+  INSERT INTO payments (
+    user_id,
+    session_id,
+    amount,
+    event_id
+  )
+  VALUES ($1, $2, $3, $4)
+  `,
+  [email, subscriptionId, amount, eventId]
+);
+     
 
       console.log("💰 SUBSCRIPTION ACTIVATED:", email, module);
 
