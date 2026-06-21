@@ -109,23 +109,24 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     }
 
     // PREMIUM CHECK
-    const subResult = await pool.query(
-      `SELECT * FROM subscriptions WHERE email = $1 AND module = $2`,
-      [email, "auto-mechanic"]
-    );
-    const sub = subResult.rows[0];
+  const userResult = await pool.query(
+  "SELECT * FROM users WHERE email = $1",
+  [email]
+);
 
-    if (!sub) {
-      return res.status(403).json({ error: "NO_SUBSCRIPTION" });
-    }
+const user = userResult.rows[0];
 
-    if (sub.status !== "active") {
-      return res.status(403).json({ error: "AUTO_MECHANIC_PREMIUM_REQUIRED" });
-    }
+if (!user) {
+  return res.status(404).json({ error: "USER_NOT_FOUND" });
+}
 
-    if (sub.requests_left <= 0) {
-      return res.status(403).json({ error: "NO_REQUESTS_LEFT" });
-    }
+if (user.is_blocked) {
+  return res.status(403).json({ error: "USER_BLOCKED" });
+}
+
+if (!user.premium) {
+  return res.status(403).json({ error: "NO_SUBSCRIPTION" });
+}
 
     // ANTI ABUSE CHECK
     const hits = user.suspicious_hits || 0;
