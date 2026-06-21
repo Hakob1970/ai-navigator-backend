@@ -138,9 +138,13 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);
 
+    console.log("➡️ BEFORE OPENROUTER REQUEST");
+
     const prompt = `Car: ${car} Year: ${year} VIN: ${vin || "not provided"} Problem: ${problem}`;
 
     try {
+console.log("➡️ ABOUT TO CALL OPENROUTER");
+      
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         signal: controller.signal,
         method: "POST",
@@ -181,6 +185,8 @@ Be precise and consistent.
           temperature: 0.1
         })
       });
+clearTimeout(timeout);
+      console.log("STATUS:", response.status);
 
       if (!response.ok) {
         const errText = await response.text();
