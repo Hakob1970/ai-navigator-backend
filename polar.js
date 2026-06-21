@@ -33,7 +33,7 @@ router.post("/create-checkout", async (req, res) => {
   "auto-mechanic":
     process.env.POLAR_AUTO_MECHANIC_PRODUCT_ID
 };
-};
+
 
     const productId = PRODUCT_IDS[module];
 
