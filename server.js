@@ -351,9 +351,13 @@ await pool.query(
     user_id,
     session_id,
     amount,
-    event_id
+    event_id,
+    provider,
+    payment_status,
+    created_at
   )
-  VALUES ($1, $2, $3, $4)
+  VALUES ($1, $2, $3, $4, 'polar', 'succeeded', NOW())
+  ON CONFLICT (event_id) DO NOTHING
   `,
   [email, subscriptionId, amount, eventId]
 );
