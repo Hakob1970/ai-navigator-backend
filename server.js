@@ -204,25 +204,25 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      console.log("🔥 POLAR WEBHOOK V2 HIT");
+      console.log("🔥 POLAR WEBHOOK HIT");
 
       const signature =
         req.headers["polar-signature"] ||
         req.headers["x-polar-signature"];
 
-    const rawBody = req.body;
+      const rawBody = req.body;
 
-const isValid = verifyPolarSignature(
-  rawBody,
-  signature,
-  process.env.POLAR_WEBHOOK_SECRET
-);
+      const isValid = verifyPolarSignature(
+        rawBody,
+        signature,
+        process.env.POLAR_WEBHOOK_SECRET
+      );
 
       if (!isValid) {
         return res.status(401).json({ error: "Invalid signature" });
       }
 
-      const body = JSON.parse(req.body.toString());
+      const body = JSON.parse(rawBody.toString());
 
       const eventType = body?.eventType || body?.type;
       const data = body?.data || body?.object || body;
@@ -231,9 +231,6 @@ const isValid = verifyPolarSignature(
         return res.status(400).json({ error: "No data" });
       }
 
-      // =========================
-      // EMAIL
-      // =========================
       const email = decodeURIComponent(
         String(
           data?.customer?.email ||
@@ -241,30 +238,11 @@ const isValid = verifyPolarSignature(
           data?.metadata?.email ||
           ""
         )
-      )
-        .trim()
-        .toLowerCase();
+      ).trim().toLowerCase();
 
       if (!email) return res.json({ received: true });
 
-      // =========================
-      // MODULE (CRITICAL FIX)
-      // =========================
-
-const module =
-  data?.metadata?.module ||
-  data?.product_metadata?.module ||
-  null;
-
-      if (!module) {
-  console.log("❌ No module in webhook");
-  return res.json({ received: true });
-}
-      
-
-      // =========================
-      // ONLY VALID EVENTS
-      // =========================
+      // ONLY SUCCESS EVENTS
       const allowedEvents = [
         "subscription.created",
         "subscription.active",
@@ -283,59 +261,17 @@ const module =
         return res.json({ received: true });
       }
 
-      // =========================
-      // DUPLICATE CHECK
-      // =========================
-     const eventId = String(data?.event?.id || data?.id || "");
-
-const exists = await pool.query(
-  `SELECT 1 FROM payments WHERE event_id = $1`,
-  [eventId]
-);
-
-if (exists.rowCount > 0) {
-  return res.json({ received: true });
-}
-      // =========================
-      // PLAN LOGIC (DIFFERENT PRODUCTS)
-      // =========================
-
-      const durationDays = 30;
-      const resetAt = Date.now() + durationDays * 24 * 60 * 60 * 1000;
-
-  const PLAN_LIMITS = {
-  "auto-mechanic-starter": 12,
-  "auto-mechanic-premium": 30,
-  "ai-navigator": null
-};
-
-const requests_left = PLAN_LIMITS[module] ?? null;
-
-      // =========================
-      // SAVE SUBSCRIPTION (UNIVERSAL)
-      // =========================
+      // 💥 SINGLE ACTION: ACTIVATE PREMIUM
       await pool.query(
         `
-        INSERT INTO subscriptions (
-          email,
-          module,
-          status,
-          requests_left,
-          reset_at
-        )
-        VALUES ($1, $2, 'active', $3, $4)
-        ON CONFLICT (email, module)
-        DO UPDATE SET
-          status = 'active',
-          requests_left = $3,
-          reset_at = $4
+        UPDATE users
+        SET premium = true
+        WHERE email = $1
         `,
-        [email, module, requests_left, resetAt]
+        [email]
       );
 
-      // =========================
-      // PAYMENT LOG (SIMPLE)
-      // =========================
+      // PAYMENT LOG (optional but safe)
       const amount =
         data?.total_amount ||
         data?.amount ||
@@ -344,27 +280,22 @@ const requests_left = PLAN_LIMITS[module] ?? null;
 
       await pool.query(
         `
-        INSERT INTO payments (
-          user_id,
-          session_id,
-          amount
-        )
+        INSERT INTO payments (user_id, session_id, amount)
         VALUES ($1, $2, $3)
         `,
         [email, subscriptionId, amount]
       );
 
-      console.log("💰 SUBSCRIPTION ACTIVATED:", email, module);
+      console.log("💰 PREMIUM ACTIVATED:", email);
 
       return res.json({ success: true });
 
     } catch (err) {
-      console.error("❌ POLAR WEBHOOK ERROR:", err);
+      console.error("❌ WEBHOOK ERROR:", err);
       return res.status(200).json({ received: true });
     }
   }
 );
-
 
 // =========================
 // GLOBAL MIDDLEWARE
