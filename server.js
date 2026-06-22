@@ -679,6 +679,8 @@ app.get("/api/bot/premium", async (req, res) => {
 // STRIPE CHECKOUT
 // =========================
 app.post("/api/polar/create-checkout", async (req, res) => {
+
+  console.log("🔥 SERVER.JS CREATE-CHECKOUT");
   try {
     const email = decodeURIComponent(
       String(req.body.email || "")
