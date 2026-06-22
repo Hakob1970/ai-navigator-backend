@@ -4,6 +4,8 @@ const axios = require("axios");
 const router = express.Router();
 
 router.post("/create-checkout", async (req, res) => {
+
+  console.log("🔥 POLAR.JS CREATE-CHECKOUT");
   try {
     const email = String(req.body.email || "")
       .trim()
