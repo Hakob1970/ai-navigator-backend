@@ -688,8 +688,8 @@ app.get("/api/bot/premium", async (req, res) => {
 // STRIPE CHECKOUT
 // =========================
 app.post("/api/polar/create-checkout", async (req, res) => {
+  console.log("🔥 SERVER.JS CREATE-CHECKOUT (PROXY)");
 
-  console.log("🔥 SERVER.JS CREATE-CHECKOUT");
   try {
     const email = decodeURIComponent(
       String(req.body.email || "")
@@ -697,14 +697,36 @@ app.post("/api/polar/create-checkout", async (req, res) => {
       .trim()
       .toLowerCase();
 
+    const module = String(req.body.module || "");
+
     if (!email) {
       return res.status(400).json({ error: "No email" });
     }
 
-    // ⚠️ пока используем static checkout link (как ты уже дал ранее)
-    const url = "https://buy.polar.sh/polar_cl_KAQ2nzn15fhbw9U0W8Hxjng6mlnK6vHjRcot80Rhmo9";
+    if (!module) {
+      return res.status(400).json({ error: "No module" });
+    }
 
-    return res.json({ url });
+    // 🚀 ПРОКСИМ В ЕДИНЫЙ ПРАВИЛЬНЫЙ FLOW (polar.js)
+    const response = await fetch(
+      `${process.env.BACKEND_URL}/api/polar/create-checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, module })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ POLAR PROXY ERROR:", data);
+      return res.status(500).json({ error: "Checkout failed" });
+    }
+
+    return res.json(data);
 
   } catch (err) {
     console.error("POLAR ERROR:", err);
