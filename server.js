@@ -219,7 +219,8 @@ app.post(
       );
 
       if (!isValid) {
-        return res.status(401).json({ error: "Invalid signature" });
+        console.error("Invalid signature");
+return res.status(200).json({ received: true });
       }
 
       const body = JSON.parse(rawBody.toString());
@@ -284,7 +285,15 @@ app.post(
       // =========================
       // DUPLICATE CHECK
       // =========================
-      const eventId = String(body?.id || body?.event_id || data?.event?.id || "");
+     const eventId =
+  String(body?.id ||
+  body?.event_id ||
+  data?.event?.id ||
+  data?.id ||
+  "");
+
+      console.log("EVENT TYPE:", eventType);
+console.log("EVENT ID:", eventId);
 
       if (!eventId) {
   console.log("❌ Missing eventId → skip");
