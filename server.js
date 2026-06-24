@@ -248,18 +248,18 @@ return res.status(200).json({ received: true });
 
       if (!email) return res.json({ received: true });
 
-      // =========================
-      // MODULE (IMPORTANT)
-      // =========================
-      const module =
-        data?.metadata?.module ||
-        data?.product_metadata?.module ||
-        null;
+// =========================
+// MODULE (ROBUST FIX)
+// =========================
+let module =
+  data?.metadata?.module ||
+  data?.product_metadata?.module ||
+  body?.metadata?.module ||
+  "auto-mechanic"; // fallback ALWAYS SAFE
 
-      if (!module) {
-        console.log("❌ No module in webhook");
-        return res.json({ received: true });
-      }
+module = String(module).trim().toLowerCase();
+
+console.log("MODULE RESOLVED:", module);
 
       // =========================
       // ONLY VALID EVENTS
@@ -321,30 +321,32 @@ console.log("EVENT ID:", eventId);
         "ai-navigator": null
       };
 
-      const requests_left = PLAN_LIMITS[module] ?? null;
+      const normalizedModule = module;
+
+const requests_left =
+  PLAN_LIMITS[normalizedModule] ?? 20; // safe fallback
 
       // =========================
       // SAVE SUBSCRIPTION
       // =========================
-      await pool.query(
-        `
-        INSERT INTO subscriptions (
-          email,
-          module,
-          status,
-          requests_left,
-          reset_at
-        )
-        VALUES ($1, $2, 'active', $3, $4)
-        ON CONFLICT (email, module)
-        DO UPDATE SET
-          status = 'active',
-          requests_left = $3,
-          reset_at = $4
-        `,
-        [email, module, requests_left, resetAt]
-      );
-
+   await pool.query(
+  `
+  INSERT INTO subscriptions (
+    email,
+    module,
+    status,
+    requests_left,
+    reset_at
+  )
+  VALUES ($1, $2, 'active', $3, $4)
+  ON CONFLICT (email, module)
+  DO UPDATE SET
+    status = 'active',
+    requests_left = EXCLUDED.requests_left,
+    reset_at = EXCLUDED.reset_at
+  `,
+  [email, normalizedModule, requests_left, resetAt]
+);
       // =========================
       // PAYMENT LOG
       // =========================
