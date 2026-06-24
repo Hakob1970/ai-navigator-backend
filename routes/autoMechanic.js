@@ -85,7 +85,7 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
   console.log("USER:", req.user);
 
   try {
-    const { problem, car, year, vin } = req.body;
+    const { problem, car, year, engine, vin } = req.body;
     const email = req.user?.email;
 
     if (!email) {
@@ -141,7 +141,13 @@ if (sub.requests_left <= 0) {
 
     console.log("➡️ BEFORE OPENROUTER REQUEST");
 
-    const prompt = `Car: ${car} Year: ${year} VIN: ${vin || "not provided"} Problem: ${problem}`;
+    const prompt = `
+Car: ${car}
+Year: ${year}
+Engine: ${engine || "not provided"}
+VIN: ${vin || "not provided"}
+Problem: ${problem}
+`;
 
     try {
 console.log("➡️ ABOUT TO CALL OPENROUTER");
