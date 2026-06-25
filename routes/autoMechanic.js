@@ -297,18 +297,22 @@ IMPORTANT:
       });
 
     } catch (err) {
-  console.error("OPENROUTER ERROR:", err);
+      console.error("OPENROUTER ERROR:", err);
 
-  if (err.name === "AbortError") {
-    return res.status(504).json({ error: "AI_TIMEOUT" });
+      if (err.name === "AbortError") {
+        return res.status(504).json({ error: "AI_TIMEOUT" });
+      }
+
+      return res.status(500).json({ error: "AI_ERROR" });
+
+    } finally {
+      clearTimeout(timeout);
+    }
+
+  } catch (err) {
+    console.error("ROUTE ERROR:", err);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
   }
+});
 
-  return res.status(500).json({ error: "AI_ERROR" });
-
-} finally {
-  clearTimeout(timeout);
-}
-
-}); // ⬅️ закрывает router.post
-
-module.exports = router;
+module.exports = router; 
