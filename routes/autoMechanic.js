@@ -296,7 +296,7 @@ IMPORTANT:
         resetAt
       });
 
-    } } catch (err) {
+    } catch (err) {
   console.error("OPENROUTER ERROR:", err);
 
   if (err.name === "AbortError") {
