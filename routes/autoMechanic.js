@@ -314,10 +314,8 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
-    // ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ ПЕРВЫЙ try (БЫЛА ПРОПУЩЕНА!)
-  }
+  }); 
 
-  // ЭТА СКОБКА ЗАКРЫВАЕТ router.post
-});
+});   // <--- ЭТО ЗАКРЫВАЕТ router.post (ОДНА СКОБКА!)
 
 module.exports = router;
