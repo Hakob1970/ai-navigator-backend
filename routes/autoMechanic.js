@@ -149,97 +149,84 @@ VIN: ${vin || "not provided"}
 Problem: ${problem}
 `;
 
-    try {
-console.log("➡️ ABOUT TO CALL OPENROUTER");
-      
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        signal: controller.signal,
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://ai-navigator-backend-mcb3.onrender.com",
-          "X-Title": "AI Navigator Auto Mechanic"
+   try {
+  console.log("➡️ ABOUT TO CALL OPENROUTER");
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    signal: controller.signal,
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://ai-navigator-backend-mcb3.onrender.com",
+      "X-Title": "AI Navigator Auto Mechanic"
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a professional automotive diagnostic system...`
         },
-        body: JSON.stringify({
-          model: "openai/gpt-4o-mini",
-          messages: [
-          {
-  role: "system",
-  content: `
-You are a professional automotive diagnostic system.
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.1
+    })
+  });
 
-RULES:
-- Do NOT guess randomly.
-- If information is insufficient, say "Insufficient data".
-- Use only logical cause-effect reasoning.
-- Provide structured output.
+  console.log("STATUS:", response.status);
 
-OUTPUT FORMAT:
-1. Most likely cause
-2. Secondary possible causes
-3. Recommended checks
-4. Suggested fix
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("OpenRouter error:", response.status, errText);
 
-Be precise and consistent.
-`
-},
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.1
-        })
-      });
-clearTimeout(timeout);
-      console.log("STATUS:", response.status);
+    return res.json({
+      result: "AI service error. Try again."
+    });
+  }
 
-if (!response.ok) {
-  const errText = await response.text();
-  console.error("OpenRouter error:", response.status, errText);
+  const data = await response.json();
+  const aiResult = data?.choices?.[0]?.message?.content;
+
+  await pool.query(
+    `UPDATE subscriptions
+     SET requests_left = requests_left - 1
+     WHERE email = $1
+     AND module = 'auto-mechanic'`,
+    [email]
+  );
+
+  const updatedSub = await pool.query(
+    `SELECT requests_left, reset_at
+     FROM subscriptions
+     WHERE email = $1
+     AND module = 'auto-mechanic'`,
+    [email]
+  );
+
+  const remaining = updatedSub.rows[0]?.requests_left ?? 0;
+  const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
 
   return res.json({
-    result: "AI service error. Try again."
+    result: aiResult || "AI temporarily unavailable",
+    remaining,
+    resetAt
   });
-}
 
-const data = await response.json();
-const aiResult = data?.choices?.[0]?.message?.content;
+} catch (err) {
+  console.error("OPENROUTER ERROR:", err);
 
-// =========================
-// DECREASE REQUESTS
-// =========================
-await pool.query(
-  `UPDATE subscriptions
-   SET requests_left = requests_left - 1
-   WHERE email = $1
-   AND module = 'auto-mechanic'`,
-  [email]
-);
+  if (err.name === "AbortError") {
+    return res.status(504).json({ error: "AI_TIMEOUT" });
+  }
 
-// =========================
-// GET UPDATED BALANCE
-// =========================
-const updatedSub = await pool.query(
-  `SELECT requests_left, reset_at
-   FROM subscriptions
-   WHERE email = $1
-   AND module = 'auto-mechanic'`,
-  [email]
-);
+  return res.status(500).json({ error: "AI_ERROR" });
 
-const remaining = updatedSub.rows[0]?.requests_left ?? 0;
-const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
-
-// =========================
-// RESPONSE TO FRONTEND
-// =========================
-return res.json({
-  result: aiResult || "AI temporarily unavailable",
-  remaining,
-  resetAt
-});
-
+} finally {
+  clearTimeout(timeout);
+} 
 
 module.exports = router;
