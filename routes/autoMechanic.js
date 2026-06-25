@@ -305,7 +305,7 @@ IMPORTANT:
 
       return res.status(500).json({ error: "AI_ERROR" });
 
-    }} finally {
+    } finally {
   clearTimeout(timeout);
 }
 
