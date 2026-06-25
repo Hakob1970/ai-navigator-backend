@@ -135,15 +135,15 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
       return res.status(403).json({ error: "ACCOUNT_TEMP_BLOCKED" });
     }
 
-// =========================
-// OPENROUTER
-// =========================
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 25000);
+    // =========================
+    // OPENROUTER
+    // =========================
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
-console.log("➡️ BEFORE OPENROUTER REQUEST");
+    console.log("➡️ BEFORE OPENROUTER REQUEST");
 
-const prompt = `
+    const prompt = `
 Car: ${car}
 Year: ${year}
 Engine: ${engine || "not provided"}
@@ -151,24 +151,24 @@ VIN: ${vin || "not provided"}
 Problem: ${problem}
 `;
 
-try {
-  console.log("➡️ ABOUT TO CALL OPENROUTER");
+    try {
+      console.log("➡️ ABOUT TO CALL OPENROUTER");
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    signal: controller.signal,
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://ai-navigator-backend-mcb3.onrender.com",
-      "X-Title": "AI Navigator Auto Mechanic"
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        signal: controller.signal,
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://ai-navigator-backend-mcb3.onrender.com",
+          "X-Title": "AI Navigator Auto Mechanic"
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `
 You are an automotive diagnostic API.
 
 CRITICAL RULES:
@@ -193,114 +193,114 @@ IMPORTANT:
 - Return ONLY JSON object
 - No extra characters allowed
 `
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.1
-    })
-  });
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.1
+        })
+      });
 
-  console.log("STATUS:", response.status);
+      console.log("STATUS:", response.status);
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("OpenRouter error:", response.status, errText);
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("OpenRouter error:", response.status, errText);
 
-    return res.status(502).json({
-      error: "OPENROUTER_FAILED",
-      result: "AI service error. Try again."
-    });
-  }
+        return res.status(502).json({
+          error: "OPENROUTER_FAILED",
+          result: "AI service error. Try again."
+        });
+      }
 
-  const data = await response.json();
-  const aiResultRaw = data?.choices?.[0]?.message?.content || "";
+      const data = await response.json();
+      const aiResultRaw = data?.choices?.[0]?.message?.content || "";
 
-  // =========================
-  // CLEAN + SAFE JSON
-  // =========================
-  let cleaned = aiResultRaw
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .replace(/❌/g, "")
-    .trim();
+      // =========================
+      // CLEAN + SAFE JSON
+      // =========================
+      let cleaned = aiResultRaw
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .replace(/❌/g, "")
+        .trim();
 
-  const jsonStart = cleaned.indexOf("{");
-  const jsonEnd = cleaned.lastIndexOf("}");
+      const jsonStart = cleaned.indexOf("{");
+      const jsonEnd = cleaned.lastIndexOf("}");
 
-  const safeJson =
-    jsonStart !== -1 && jsonEnd !== -1
-      ? cleaned.slice(jsonStart, jsonEnd + 1)
-      : cleaned;
+      const safeJson =
+        jsonStart !== -1 && jsonEnd !== -1
+          ? cleaned.slice(jsonStart, jsonEnd + 1)
+          : cleaned;
 
-  // =========================
-  // PARSE JSON
-  // =========================
-  let aiResult;
+      // =========================
+      // PARSE JSON
+      // =========================
+      let aiResult;
 
-  try {
-    aiResult = JSON.parse(safeJson);
-  } catch (e) {
-    console.error("❌ BAD JSON FROM AI:", safeJson);
+      try {
+        aiResult = JSON.parse(safeJson);
+      } catch (e) {
+        console.error("❌ BAD JSON FROM AI:", safeJson);
 
-    // Получаем текущий баланс перед ошибкой
-    const currentSub = await pool.query(
-      `SELECT requests_left, reset_at
-       FROM subscriptions
-       WHERE email = $1
-       AND module = 'auto-mechanic'`,
-      [email]
-    );
+        // Получаем текущий баланс перед ошибкой
+        const currentSub = await pool.query(
+          `SELECT requests_left, reset_at
+           FROM subscriptions
+           WHERE email = $1
+           AND module = 'auto-mechanic'`,
+          [email]
+        );
 
-    const remaining = currentSub.rows[0]?.requests_left ?? 0;
-    const resetAt = currentSub.rows[0]?.reset_at ?? 0;
+        const remaining = currentSub.rows[0]?.requests_left ?? 0;
+        const resetAt = currentSub.rows[0]?.reset_at ?? 0;
 
-    return res.json({
-      result: {
-        title: "Invalid AI response",
-        most_likely_cause: "AI returned broken format",
-        secondary_causes: [],
-        recommended_checks: [],
-        suggested_fix: [],
-        system: "unknown"
-      },
-      remaining,
-      resetAt
-    });
-  }
+        return res.json({
+          result: {
+            title: "Invalid AI response",
+            most_likely_cause: "AI returned broken format",
+            secondary_causes: [],
+            recommended_checks: [],
+            suggested_fix: [],
+            system: "unknown"
+          },
+          remaining,
+          resetAt
+        });
+      }
 
-  // =========================
-  // UPDATE LIMITS
-  // =========================
-  await pool.query(
-    `UPDATE subscriptions
-     SET requests_left = requests_left - 1
-     WHERE email = $1
-     AND module = 'auto-mechanic'`,
-    [email]
-  );
+      // =========================
+      // UPDATE LIMITS
+      // =========================
+      await pool.query(
+        `UPDATE subscriptions
+         SET requests_left = requests_left - 1
+         WHERE email = $1
+         AND module = 'auto-mechanic'`,
+        [email]
+      );
 
-  const updatedSub = await pool.query(
-    `SELECT requests_left, reset_at
-     FROM subscriptions
-     WHERE email = $1
-     AND module = 'auto-mechanic'`,
-    [email]
-  );
+      const updatedSub = await pool.query(
+        `SELECT requests_left, reset_at
+         FROM subscriptions
+         WHERE email = $1
+         AND module = 'auto-mechanic'`,
+        [email]
+      );
 
-  const remaining = updatedSub.rows[0]?.requests_left ?? 0;
-  const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
+      const remaining = updatedSub.rows[0]?.requests_left ?? 0;
+      const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
 
-  // =========================
-  // RESPONSE
-  // =========================
-  return res.json({
-    result: aiResult,
-    remaining,
-    resetAt
-  });
+      // =========================
+      // RESPONSE
+      // =========================
+      return res.json({
+        result: aiResult,
+        remaining,
+        resetAt
+      });
 
     } catch (err) {
       console.error("OPENROUTER ERROR:", err);
@@ -314,7 +314,10 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
+    // ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ ПЕРВЫЙ try (БЫЛА ПРОПУЩЕНА!)
   }
-    });   // ← ТОЛЬКО ОДНА ЭТА СКОБКА!
+
+  // ЭТА СКОБКА ЗАКРЫВАЕТ router.post
+});
 
 module.exports = router;
