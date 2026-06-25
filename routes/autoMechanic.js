@@ -195,33 +195,51 @@ Be precise and consistent.
 clearTimeout(timeout);
       console.log("STATUS:", response.status);
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("OpenRouter error:", response.status, errText);
-        return res.json({ result: "AI service error. Try again." });
-      }
+if (!response.ok) {
+  const errText = await response.text();
+  console.error("OpenRouter error:", response.status, errText);
 
-      const data = await response.json();
-      const aiResult = data?.choices?.[0]?.message?.content;
+  return res.json({
+    result: "AI service error. Try again."
+  });
+}
 
-      return res.json({
-        result: aiResult || "AI temporarily unavailable"
-      });
+const data = await response.json();
+const aiResult = data?.choices?.[0]?.message?.content;
 
-    } catch (err) {
-      console.error("OPENROUTER ERROR:", err);
-      if (err.name === "AbortError") {
-        return res.status(504).json({ error: "AI_TIMEOUT" });
-      }
-      return res.status(500).json({ error: "AI_ERROR" });
-    } finally {
-      clearTimeout(timeout);
-    }
+// =========================
+// DECREASE REQUESTS
+// =========================
+await pool.query(
+  `UPDATE subscriptions
+   SET requests_left = requests_left - 1
+   WHERE email = $1
+   AND module = 'auto-mechanic'`,
+  [email]
+);
 
-  } catch (error) {
-    console.error("ROUTE ERROR:", error);
-    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
-  }
+// =========================
+// GET UPDATED BALANCE
+// =========================
+const updatedSub = await pool.query(
+  `SELECT requests_left, reset_at
+   FROM subscriptions
+   WHERE email = $1
+   AND module = 'auto-mechanic'`,
+  [email]
+);
+
+const remaining = updatedSub.rows[0]?.requests_left ?? 0;
+const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
+
+// =========================
+// RESPONSE TO FRONTEND
+// =========================
+return res.json({
+  result: aiResult || "AI temporarily unavailable",
+  remaining,
+  resetAt
+});
 });
 
 module.exports = router;
