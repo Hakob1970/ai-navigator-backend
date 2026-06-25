@@ -214,46 +214,34 @@ IMPORTANT:
 
       console.log("STATUS:", response.status);
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("OpenRouter error:", response.status, errText);
-
-        return res.status(502).json({
-  error: "OPENROUTER_FAILED",
-  result: "AI service error. Try again."
-});
-      }
+if (!response.ok) {
+  const errText = await response.text();
+  console.error("OpenRouter error:", response.status, errText);
+  return res.status(502).json({
+    error: "OPENROUTER_FAILED",
+    result: "AI service error. Try again."
+  });
+}
 
 const data = await response.json();
-
-// =========================
-// RAW AI OUTPUT
-// =========================
 const aiResultRaw = data?.choices?.[0]?.message?.content || "";
 
-// =========================
-// CLEAN AI OUTPUT
-// =========================
-const cleaned = aiResultRaw
+// Очистка и извлечение JSON
+let cleaned = aiResultRaw
   .replace(/```json/g, "")
   .replace(/```/g, "")
   .replace(/❌/g, "")
   .trim();
 
-// 🔥 УБИРАЕМ ВСЁ ДО JSON
 const jsonStart = cleaned.indexOf("{");
 const safeJson = jsonStart !== -1 ? cleaned.slice(jsonStart) : cleaned;
 
-// =========================
-// PARSE JSON SAFELY
-// =========================
+// Парсинг JSON
 let aiResult;
-
 try {
   aiResult = JSON.parse(safeJson);
 } catch (e) {
   console.error("❌ BAD JSON FROM AI:", safeJson);
-
   return res.json({
     result: {
       code: "PARSE_ERROR",
@@ -268,9 +256,7 @@ try {
   });
 }
 
-// =========================
-// DECREASE REQUESTS
-// =========================
+// Уменьшаем количество запросов
 await pool.query(
   `UPDATE subscriptions
    SET requests_left = requests_left - 1
@@ -279,9 +265,7 @@ await pool.query(
   [email]
 );
 
-// =========================
-// GET UPDATED BALANCE
-// =========================
+// Получаем обновленный баланс
 const updatedSub = await pool.query(
   `SELECT requests_left, reset_at
    FROM subscriptions
@@ -293,33 +277,22 @@ const updatedSub = await pool.query(
 const remaining = updatedSub.rows[0]?.requests_left ?? 0;
 const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
 
-// =========================
-// RESPONSE
-// =========================
+// Ответ
 return res.json({
   result: aiResult,
   remaining,
   resetAt
 });
 
-    } catch (err) {
-      console.error("OPENROUTER ERROR:", err);
-
-      if (err.name === "AbortError") {
-        return res.status(504).json({ error: "AI_TIMEOUT" });
-      }
-
-      return res.status(500).json({ error: "AI_ERROR" });
-
-    } finally {
-      clearTimeout(timeout);
-    } // <-- Закрывает внутренний try/catch/finally
-
-  } catch (err) {
-    // Этот catch ловит ошибки из основного try (включая pool.query и т.д.)
-    console.error("MAIN ROUTE ERROR:", err);
-    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
+} catch (err) {
+  console.error("OPENROUTER ERROR:", err);
+  if (err.name === "AbortError") {
+    return res.status(504).json({ error: "AI_TIMEOUT" });
   }
+  return res.status(500).json({ error: "AI_ERROR" });
+} finally {
+  clearTimeout(timeout);
+}
 });
 
 module.exports = router;
