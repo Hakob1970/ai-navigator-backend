@@ -314,7 +314,6 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
-  }); 
 
 });   // <--- ЭТО ЗАКРЫВАЕТ router.post (ОДНА СКОБКА!)
 
