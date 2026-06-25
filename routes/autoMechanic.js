@@ -305,13 +305,10 @@ IMPORTANT:
 
       return res.status(500).json({ error: "AI_ERROR" });
 
-    } finally {
-      clearTimeout(timeout);
-    }
-    // ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ ВНЕШНИЙ try
-  }
+    }} finally {
+  clearTimeout(timeout);
+}
 
-  // ЭТА СКОБКА ЗАКРЫВАЕТ router.post
 });
 
 module.exports = router;
