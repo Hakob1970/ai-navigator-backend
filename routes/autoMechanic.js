@@ -296,7 +296,7 @@ IMPORTANT:
       // =========================
       // RESPONSE
       // =========================
-      return res.json({
+           return res.json({
         result: aiResult,
         remaining,
         resetAt
@@ -314,7 +314,8 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
+  }   // <--- ЭТА СКОБКА ЗАКРЫВАЕТ ВНЕШНИЙ try (ДОБАВЬТЕ!)
 
-});   // <--- ЭТО ЗАКРЫВАЕТ router.post (ОДНА СКОБКА!)
+});   // <--- ЭТО ЗАКРЫВАЕТ router.post
 
 module.exports = router;
