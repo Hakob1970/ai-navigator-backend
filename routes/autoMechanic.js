@@ -314,6 +314,7 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
+  }
     });   // ← ТОЛЬКО ОДНА ЭТА СКОБКА!
 
 module.exports = router;
