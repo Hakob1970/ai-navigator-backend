@@ -240,6 +240,6 @@ return res.json({
   remaining,
   resetAt
 });
-});
+
 
 module.exports = router;
