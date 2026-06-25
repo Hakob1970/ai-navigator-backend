@@ -302,18 +302,18 @@ IMPORTANT:
     resetAt
   });
 
-} catch (err) {
-  console.error("OPENROUTER ERROR:", err);
+    } catch (err) {
+      console.error("OPENROUTER ERROR:", err);
 
-  if (err.name === "AbortError") {
-    return res.status(504).json({ error: "AI_TIMEOUT" });
-  }
+      if (err.name === "AbortError") {
+        return res.status(504).json({ error: "AI_TIMEOUT" });
+      }
 
-  return res.status(500).json({ error: "AI_ERROR" });
+      return res.status(500).json({ error: "AI_ERROR" });
 
-} finally {
-  clearTimeout(timeout);
-}
-    });
+    } finally {
+      clearTimeout(timeout);
+    }
+    });   // ← ТОЛЬКО ОДНА ЭТА СКОБКА!
 
 module.exports = router;
