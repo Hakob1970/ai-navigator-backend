@@ -245,6 +245,18 @@ IMPORTANT:
   } catch (e) {
     console.error("❌ BAD JSON FROM AI:", safeJson);
 
+    // Получаем текущий баланс перед ошибкой
+    const currentSub = await pool.query(
+      `SELECT requests_left, reset_at
+       FROM subscriptions
+       WHERE email = $1
+       AND module = 'auto-mechanic'`,
+      [email]
+    );
+
+    const remaining = currentSub.rows[0]?.requests_left ?? 0;
+    const resetAt = currentSub.rows[0]?.reset_at ?? 0;
+
     return res.json({
       result: {
         title: "Invalid AI response",
