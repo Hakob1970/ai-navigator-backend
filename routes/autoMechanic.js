@@ -308,7 +308,7 @@ IMPORTANT:
     } finally {
   clearTimeout(timeout);
 }
-
+  }
 });
 
 module.exports = router;
