@@ -143,13 +143,11 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
 
     console.log("➡️ BEFORE OPENROUTER REQUEST");
 
-    const prompt = `
-Car: ${car}
+    const prompt = `Car: ${car}
 Year: ${year}
 Engine: ${engine || "not provided"}
 VIN: ${vin || "not provided"}
-Problem: ${problem}
-`;
+Problem: ${problem}`;
 
     try {
       console.log("➡️ ABOUT TO CALL OPENROUTER");
@@ -168,8 +166,7 @@ Problem: ${problem}
           messages: [
             {
               role: "system",
-              content: `
-You are an automotive diagnostic API.
+              content: `You are an automotive diagnostic API.
 
 CRITICAL RULES:
 - You MUST return ONLY valid JSON.
@@ -191,8 +188,7 @@ OUTPUT FORMAT:
 
 IMPORTANT:
 - Return ONLY JSON object
-- No extra characters allowed
-`
+- No extra characters allowed`
             },
             {
               role: "user",
@@ -230,10 +226,9 @@ IMPORTANT:
       const jsonStart = cleaned.indexOf("{");
       const jsonEnd = cleaned.lastIndexOf("}");
 
-      const safeJson =
-        jsonStart !== -1 && jsonEnd !== -1
-          ? cleaned.slice(jsonStart, jsonEnd + 1)
-          : cleaned;
+      const safeJson = jsonStart !== -1 && jsonEnd !== -1
+        ? cleaned.slice(jsonStart, jsonEnd + 1)
+        : cleaned;
 
       // =========================
       // PARSE JSON
@@ -245,7 +240,6 @@ IMPORTANT:
       } catch (e) {
         console.error("❌ BAD JSON FROM AI:", safeJson);
 
-        // Получаем текущий баланс перед ошибкой
         const currentSub = await pool.query(
           `SELECT requests_left, reset_at
            FROM subscriptions
@@ -296,7 +290,7 @@ IMPORTANT:
       // =========================
       // RESPONSE
       // =========================
-           return res.json({
+      return res.json({
         result: aiResult,
         remaining,
         resetAt
@@ -314,8 +308,10 @@ IMPORTANT:
     } finally {
       clearTimeout(timeout);
     }
-  }   // <--- ЭТА СКОБКА ЗАКРЫВАЕТ ВНЕШНИЙ try (ДОБАВЬТЕ!)
+    // ВОТ ЭТА СКОБКА ЗАКРЫВАЕТ ВНЕШНИЙ try
+  }
 
-});   // <--- ЭТО ЗАКРЫВАЕТ router.post
+  // ЭТА СКОБКА ЗАКРЫВАЕТ router.post
+});
 
 module.exports = router;
