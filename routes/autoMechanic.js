@@ -224,33 +224,83 @@ IMPORTANT:
 });
       }
 
-      const data = await response.json();
-      const aiResult = data?.choices?.[0]?.message?.content;
+const data = await response.json();
 
-      await pool.query(
-        `UPDATE subscriptions
-         SET requests_left = requests_left - 1
-         WHERE email = $1
-         AND module = 'auto-mechanic'`,
-        [email]
-      );
+// =========================
+// RAW AI OUTPUT
+// =========================
+const aiResultRaw = data?.choices?.[0]?.message?.content || "";
 
-      const updatedSub = await pool.query(
-        `SELECT requests_left, reset_at
-         FROM subscriptions
-         WHERE email = $1
-         AND module = 'auto-mechanic'`,
-        [email]
-      );
+// =========================
+// CLEAN AI OUTPUT
+// =========================
+const cleaned = aiResultRaw
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .replace(/❌/g, "")
+  .trim();
 
-      const remaining = updatedSub.rows[0]?.requests_left ?? 0;
-      const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
+// 🔥 УБИРАЕМ ВСЁ ДО JSON
+const jsonStart = cleaned.indexOf("{");
+const safeJson = jsonStart !== -1 ? cleaned.slice(jsonStart) : cleaned;
 
-      return res.json({
-        result: aiResult || "AI temporarily unavailable",
-        remaining,
-        resetAt
-      });
+// =========================
+// PARSE JSON SAFELY
+// =========================
+let aiResult;
+
+try {
+  aiResult = JSON.parse(safeJson);
+} catch (e) {
+  console.error("❌ BAD JSON FROM AI:", safeJson);
+
+  return res.json({
+    result: {
+      code: "PARSE_ERROR",
+      title: "Invalid AI response",
+      most_likely_cause: "AI returned non-JSON or broken JSON",
+      secondary_causes: [],
+      recommended_checks: [],
+      suggested_fix: []
+    },
+    remaining,
+    resetAt
+  });
+}
+
+// =========================
+// DECREASE REQUESTS
+// =========================
+await pool.query(
+  `UPDATE subscriptions
+   SET requests_left = requests_left - 1
+   WHERE email = $1
+   AND module = 'auto-mechanic'`,
+  [email]
+);
+
+// =========================
+// GET UPDATED BALANCE
+// =========================
+const updatedSub = await pool.query(
+  `SELECT requests_left, reset_at
+   FROM subscriptions
+   WHERE email = $1
+   AND module = 'auto-mechanic'`,
+  [email]
+);
+
+const remaining = updatedSub.rows[0]?.requests_left ?? 0;
+const resetAt = updatedSub.rows[0]?.reset_at ?? 0;
+
+// =========================
+// RESPONSE
+// =========================
+return res.json({
+  result: aiResult,
+  remaining,
+  resetAt
+});
 
     } catch (err) {
       console.error("OPENROUTER ERROR:", err);
