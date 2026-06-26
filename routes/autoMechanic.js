@@ -212,14 +212,8 @@ IMPORTANT:
       }
 
       const data = await response.json();
-
-console.log("📦 FULL DATA OBJECT:", JSON.stringify(data, null, 2));
       
       const aiResultRaw = data?.choices?.[0]?.message?.content || "";
-
-      console.log("📝 RAW AI RESPONSE:", aiResultRaw);
-console.log("📝 RESPONSE TYPE:", typeof aiResultRaw);
-console.log("📝 RESPONSE LENGTH:", aiResultRaw.length);
 
       // =========================
       // CLEAN + SAFE JSON
@@ -229,21 +223,13 @@ console.log("📝 RESPONSE LENGTH:", aiResultRaw.length);
         .replace(/```/g, "")
         .replace(/❌/g, "")
         .trim();
-
-console.log("🧹 AFTER CLEANUP:", cleaned);
-console.log("🧹 CLEANED LENGTH:", cleaned.length);
       
       const jsonStart = cleaned.indexOf("{");
       const jsonEnd = cleaned.lastIndexOf("}");
 
-      console.log(`🔍 JSON START: ${jsonStart}, END: ${jsonEnd}`);
-
       const safeJson = jsonStart !== -1 && jsonEnd !== -1
         ? cleaned.slice(jsonStart, jsonEnd + 1)
         : cleaned;
-
-        console.error("❌ NO JSON FOUND IN RESPONSE");
-  console.error("❌ RESPONSE WAS:", cleaned);
 
       // =========================
       // PARSE JSON
@@ -251,17 +237,8 @@ console.log("🧹 CLEANED LENGTH:", cleaned.length);
       let aiResult;
 
       try {
-console.log("🔄 PARSING JSON...");
-        
         aiResult = JSON.parse(safeJson);
-
-          console.log("✅ JSON PARSED SUCCESSFULLY");
-  console.log("📊 PARSED RESULT:", JSON.stringify(aiResult, null, 2));
       } catch (e) {
-        console.error("❌ BAD JSON FROM AI:", safeJson);
-          console.error("❌ PARSE ERROR:", e.message);
-  console.error("❌ ERROR STACK:", e.stack);
-
         const currentSub = await pool.query(
           `SELECT requests_left, reset_at
            FROM subscriptions
