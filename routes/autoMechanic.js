@@ -225,17 +225,13 @@ If you are unsure, choose the closest matching value from the allowed list.
 FINAL RULE:
 If your response is not valid JSON, it is considered a failed response.
 `
-
-IMPORTANT:
-- Return ONLY JSON object
-- No extra characters allowed`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.1
+  },
+  {
+    role: "user",
+    content: prompt
+  }
+],
+temperature: 0.1
         })
       });
 
