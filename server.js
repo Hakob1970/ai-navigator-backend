@@ -300,15 +300,6 @@ console.log("EVENT ID:", eventId);
   return res.json({ received: true });
 }
 
-      const exists = await pool.query(
-        `SELECT 1 FROM payments WHERE event_id = $1`,
-        [eventId]
-      );
-
-      if (exists.rowCount > 0) {
-        return res.json({ received: true });
-      }
-
       // =========================
       // PLAN LOGIC
       // =========================
@@ -323,13 +314,16 @@ console.log("EVENT ID:", eventId);
 
       const normalizedModule = module;
 
-const requests_left =
-  PLAN_LIMITS[normalizedModule] ?? 20; // safe fallback
+const isUnlimited = PLAN_LIMITS[normalizedModule] === null;
+
+const requests_left = isUnlimited
+  ? null
+  : PLAN_LIMITS[normalizedModule] ?? 20;
 
       // =========================
       // SAVE SUBSCRIPTION
       // =========================
-   await pool.query(
+await pool.query(
   `
   INSERT INTO subscriptions (
     email,
@@ -342,8 +336,14 @@ const requests_left =
   ON CONFLICT (email, module)
   DO UPDATE SET
     status = 'active',
-    requests_left = EXCLUDED.requests_left,
-    reset_at = EXCLUDED.reset_at
+    requests_left = CASE 
+      WHEN subscriptions.reset_at < NOW() THEN EXCLUDED.requests_left
+      ELSE subscriptions.requests_left
+    END,
+    reset_at = CASE 
+      WHEN subscriptions.reset_at < NOW() THEN EXCLUDED.reset_at
+      ELSE subscriptions.reset_at
+    END
   `,
   [email, normalizedModule, requests_left, resetAt]
 );
@@ -735,6 +735,21 @@ app.post("/api/polar/create-checkout", async (req, res) => {
     return res.status(500).json({ error: "Polar error" });
   }
 });
+
+
+// =========================
+// BOT / API ROUTES
+// =========================
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "ai-navigator-backend",
+    time: new Date().toISOString()
+  });
+});
+
+
 
 
 app.post("/api/user/link-telegram", async (req, res) => {
