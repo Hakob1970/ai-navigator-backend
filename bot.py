@@ -19,16 +19,23 @@ BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
 def link_telegram(email, telegram_id):
     try:
-        requests.post(
+        res = requests.post(
             f"{BACKEND}/api/user/link-telegram",
             json={
                 "email": email,
                 "telegramId": str(telegram_id)
             },
-            timeout=3
+            timeout=8
         )
-    except:
-        pass
+
+        print("LINK TELEGRAM STATUS:", res.status_code)
+        print("LINK TELEGRAM RESPONSE:", res.text)
+
+        if res.status_code != 200:
+            print("❌ LINK FAILED FOR:", email)
+
+    except Exception as e:
+        print("❌ LINK TELEGRAM ERROR:", e)
 
 
 # =========================
