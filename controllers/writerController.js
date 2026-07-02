@@ -14,7 +14,7 @@ exports.generate = async (req, res) => {
     const email = req.user?.email;
     const user = req.userDB;
 
-    const { type, prompt, options } = req.body;
+    const { type, prompt, options, projectTitle } = req.body;
 
     // 1. VALIDATION
     const validation = validationService.validateGenerateInput({
@@ -30,34 +30,58 @@ exports.generate = async (req, res) => {
       });
     }
 
-    // 2. BUILD PROMPT
+    const cleanData = validation.data;
+
+    // 2. CREATE OR USE PROJECT
+    let project = null;
+
+    if (projectTitle) {
+      project = await projectService.createProject({
+        email,
+        type: cleanData.type,
+        title: projectTitle,
+      });
+    }
+
+    // 3. BUILD PROMPT
     const finalPrompt = promptBuilder.build({
-      type,
-      prompt,
-      options,
+      type: cleanData.type,
+      prompt: cleanData.prompt,
+      options: cleanData.options,
       user,
     });
 
-    // 3. MEMORY LOAD (future use)
+    // 4. MEMORY (future-ready)
     const memory = await memoryService.loadUserMemory(email);
 
-    // 4. CALL AI
+    // 5. AI GENERATION
     const aiResult = await openrouter.generate({
       prompt: finalPrompt,
       memory,
     });
 
-    // 5. SAVE HISTORY
+    // 6. SAVE TO PROJECT (if exists)
+    if (project) {
+      await projectService.updateProject({
+        email,
+        id: project.id,
+        content: aiResult,
+      });
+    }
+
+    // 7. HISTORY SAVE
     await historyService.save({
       email,
-      type,
-      prompt,
+      type: cleanData.type,
+      prompt: cleanData.prompt,
       response: aiResult,
     });
 
+    // 8. RESPONSE
     return res.json({
       success: true,
       data: aiResult,
+      project: project || null,
     });
 
   } catch (err) {
@@ -69,7 +93,6 @@ exports.generate = async (req, res) => {
     });
   }
 };
-
 // =========================
 // PLACEHOLDERS (NEXT STEPS)
 // =========================
