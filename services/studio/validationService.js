@@ -1,88 +1,43 @@
-// =========================
-// ALLOWED CATEGORIES
-// =========================
-const ALLOWED_CATEGORIES = [
-  "Books",
-  "Education",
-  "Business",
-  "Content",
-  "Creative",
-  "Tools"
-];
-
-// =========================
-// ALLOWED MODES
-// =========================
-const ALLOWED_MODES = [
-  "Fantasy",
-  "Sci-Fi",
-  "Romance",
-  "Historical",
-  "Mystery",
-
-  "Essay",
-  "Research",
-  "Homework",
-  "Summary",
-
-  "Email",
-  "Proposal",
-  "Marketing",
-  "Business Plan",
-
-  "Blog",
-  "SEO",
-  "YouTube",
-  "Instagram",
-
-  "Characters",
-  "Plot",
-  "Dialogue",
-  "World Builder",
-
-  "Rewrite",
-  "Grammar",
-  "Translate",
-  "Humanize"
-];
+const writerConfig = require("../../config/writer");
 
 // =========================
 // VALIDATION
 // =========================
 exports.validateGenerateInput = ({ category, mode, formData }) => {
 
-  // Category
+  // 1. category
   if (!category) {
     return { ok: false, error: "CATEGORY_REQUIRED" };
   }
 
-  if (!ALLOWED_CATEGORIES.includes(category)) {
+  if (!writerConfig[category]) {
     return { ok: false, error: "INVALID_CATEGORY" };
   }
 
-  // Mode
+  // 2. mode
   if (!mode) {
     return { ok: false, error: "MODE_REQUIRED" };
   }
 
-  if (!ALLOWED_MODES.includes(mode)) {
-    return { ok: false, error: "INVALID_MODE" };
+  const allowedModes = writerConfig[category];
+
+  if (!allowedModes.includes(mode)) {
+    return { ok: false, error: "INVALID_MODE_FOR_CATEGORY" };
   }
 
-  // Form data
+  // 3. formData
   if (!formData || typeof formData !== "object" || Array.isArray(formData)) {
     return { ok: false, error: "FORMDATA_REQUIRED" };
   }
 
-  // At least one field must be filled
   const hasData = Object.values(formData)
-    .some(value => String(value ?? "").trim().length > 0);
+    .some(v => String(v ?? "").trim().length > 0);
 
   if (!hasData) {
     return { ok: false, error: "EMPTY_FORMDATA" };
   }
 
-  // Success
+  // OK
   return {
     ok: true,
     data: {
