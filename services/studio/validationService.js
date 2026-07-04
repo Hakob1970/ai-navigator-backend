@@ -1,58 +1,94 @@
 // =========================
-// ALLOWED TYPES
+// ALLOWED CATEGORIES
 // =========================
-const ALLOWED_TYPES = [
-  "book",
-  "novel",
-  "story",
-  "essay",
-  "article",
-  "script",
-  "poem",
-  "character",
-  "world",
-  "chapter",
-  "rewrite",
+const ALLOWED_CATEGORIES = [
+  "Books",
+  "Education",
+  "Business",
+  "Content",
+  "Creative",
+  "Tools"
 ];
 
 // =========================
-// MAIN VALIDATION
+// ALLOWED MODES
 // =========================
-exports.validateGenerateInput = ({ type, prompt, options }) => {
-  // 1. type check
-  if (!type) {
-    return { ok: false, error: "TYPE_REQUIRED" };
+const ALLOWED_MODES = [
+  "Fantasy",
+  "Sci-Fi",
+  "Romance",
+  "Historical",
+  "Mystery",
+
+  "Essay",
+  "Research",
+  "Homework",
+  "Summary",
+
+  "Email",
+  "Proposal",
+  "Marketing",
+  "Business Plan",
+
+  "Blog",
+  "SEO",
+  "YouTube",
+  "Instagram",
+
+  "Characters",
+  "Plot",
+  "Dialogue",
+  "World Builder",
+
+  "Rewrite",
+  "Grammar",
+  "Translate",
+  "Humanize"
+];
+
+// =========================
+// VALIDATION
+// =========================
+exports.validateGenerateInput = ({ category, mode, formData }) => {
+
+  // Category
+  if (!category) {
+    return { ok: false, error: "CATEGORY_REQUIRED" };
   }
 
-  if (!ALLOWED_TYPES.includes(type)) {
-    return { ok: false, error: "INVALID_TYPE" };
+  if (!ALLOWED_CATEGORIES.includes(category)) {
+    return { ok: false, error: "INVALID_CATEGORY" };
   }
 
-  // 2. prompt check
-  if (!prompt || typeof prompt !== "string") {
-    return { ok: false, error: "PROMPT_REQUIRED" };
+  // Mode
+  if (!mode) {
+    return { ok: false, error: "MODE_REQUIRED" };
   }
 
-  if (prompt.trim().length < 3) {
-    return { ok: false, error: "PROMPT_TOO_SHORT" };
+  if (!ALLOWED_MODES.includes(mode)) {
+    return { ok: false, error: "INVALID_MODE" };
   }
 
-  if (prompt.length > 20000) {
-    return { ok: false, error: "PROMPT_TOO_LONG" };
+  // Form data
+  if (!formData || typeof formData !== "object" || Array.isArray(formData)) {
+    return { ok: false, error: "FORMDATA_REQUIRED" };
   }
 
-  // 3. options check
-  if (options && typeof options !== "object") {
-    return { ok: false, error: "OPTIONS_MUST_BE_OBJECT" };
+  // At least one field must be filled
+  const hasData = Object.values(formData)
+    .some(value => String(value ?? "").trim().length > 0);
+
+  if (!hasData) {
+    return { ok: false, error: "EMPTY_FORMDATA" };
   }
 
-  // 4. normalize
+  // Success
   return {
     ok: true,
     data: {
-      type: type.trim(),
-      prompt: prompt.trim(),
-      options: options || {},
-    },
+      category,
+      mode,
+      formData
+    }
   };
 };
