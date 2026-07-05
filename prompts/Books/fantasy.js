@@ -5,6 +5,29 @@ module.exports = (formData) => {
   const world = formData?.World || "A mysterious world";
   const style = formData?.Style || "cinematic and immersive";
 
+  // =========================
+  // INPUT BLOCK
+  // =========================
+  const input = `
+Title: ${title}
+Main Character: ${mainCharacter}
+World: ${world}
+`.trim();
+
+  // =========================
+  // STORY REQUIREMENTS
+  // =========================
+  const requirements = `
+- Create a strong opening hook
+- Develop a rich fantasy world
+- Include emotional character development
+- Add conflict and resolution
+- Make the story engaging and cinematic
+`.trim();
+
+  // =========================
+  // FINAL PROMPT
+  // =========================
   return `
 You are a professional fantasy novelist.
 
@@ -17,16 +40,10 @@ IMPORTANT RULES:
 - Write in a ${style} style
 
 INPUT:
-Title: ${title}
-Main Character: ${mainCharacter}
-World: ${world}
+${input}
 
 STORY REQUIREMENTS:
-- Create a strong opening hook
-- Develop a rich fantasy world
-- Include emotional character development
-- Add conflict and resolution
-- Make the story engaging and cinematic
+${requirements}
 
 Now write the full fantasy story.
 `.trim();
