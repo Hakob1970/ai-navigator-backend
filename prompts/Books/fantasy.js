@@ -6,6 +6,16 @@ module.exports = (formData) => {
   const style = formData?.Style || "cinematic and immersive";
 
   // =========================
+  // RULES
+  // =========================
+  const rules = `
+- Do not explain anything
+- Do not describe your process
+- Output only the final story
+- Write in a ${style} style
+`.trim();
+
+  // =========================
   // INPUT BLOCK
   // =========================
   const input = `
@@ -34,10 +44,7 @@ You are a professional fantasy novelist.
 Write a high-quality fantasy story based on the input below.
 
 IMPORTANT RULES:
-- Do not explain anything
-- Do not describe your process
-- Output only the final story
-- Write in a ${style} style
+${rules}
 
 INPUT:
 ${input}
@@ -47,5 +54,4 @@ ${requirements}
 
 Now write the full fantasy story.
 `.trim();
-
 };
