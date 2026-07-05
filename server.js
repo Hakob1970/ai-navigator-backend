@@ -388,9 +388,12 @@ await pool.query(
 // =========================
 app.use(cors({
   origin: [
+    "https://ai-writer-studio-phi.vercel.app",
     "https://ai-navigator-frontend.vercel.app",
     "http://localhost:5500"
-  ]
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
 }));
 
 app.use(express.json());
