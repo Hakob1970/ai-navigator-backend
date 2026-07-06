@@ -1,6 +1,5 @@
-// services/studio/engine/projectBuilder.js
-
 const BookProject = require("./types");
+const { ENGINE_MODES } = require("./constants");
 
 /**
  * 🏗️ ProjectBuilder
@@ -9,10 +8,6 @@ const BookProject = require("./types");
 
 class ProjectBuilder {
 
-    /**
-     * 📦 create()
-     * Создаёт новый BookProject
-     */
     static create(input = {}) {
 
         const now = new Date().toISOString();
@@ -28,10 +23,10 @@ class ProjectBuilder {
         project.metadata.updatedAt = now;
         project.metadata.author.name = input.author || "";
 
-            // =========================
-    // 🧠 ENGINE
-    // =========================
-    project.engine.mode = input.mode || "book";
+        // =========================
+        // 🧠 ENGINE
+        // =========================
+        project.engine.mode = input.mode || ENGINE_MODES.BOOK;
 
         // =========================
         // ⚙️ SETTINGS
@@ -48,13 +43,13 @@ class ProjectBuilder {
         }
 
         // =========================
-        // 🌍 WORLD (пока базово)
+        // 🌍 WORLD (минимально)
         // =========================
         project.world.name = input.worldName || "";
         project.world.description = input.worldDescription || "";
 
         // =========================
-        // 🧠 INITIAL STATE
+        // 🔄 INITIAL STATE
         // =========================
         project.generation.currentStep = "initialized";
         project.generation.status = "idle";
@@ -62,9 +57,6 @@ class ProjectBuilder {
         return project;
     }
 
-    /**
-     * 🆔 simple id generator
-     */
     static _generateId() {
         return "book_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
     }
