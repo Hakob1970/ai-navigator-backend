@@ -24,6 +24,10 @@ const BookProject = {
         version: 1
     },
 
+        // =========================
+    // 🧠 ENGINE
+    // =========================
+
     engine: {
     mode: "book"
 },
