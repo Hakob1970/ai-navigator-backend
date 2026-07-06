@@ -28,6 +28,11 @@ class ProjectBuilder {
         project.metadata.updatedAt = now;
         project.metadata.author.name = input.author || "";
 
+            // =========================
+    // 🧠 ENGINE
+    // =========================
+    project.engine.mode = input.mode || "book";
+
         // =========================
         // ⚙️ SETTINGS
         // =========================
