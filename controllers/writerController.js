@@ -1,6 +1,7 @@
 const validation = require("../services/studio/validationService");
 const promptBuilder = require("../services/studio/promptBuilder");
 const openrouter = require("../services/studio/ai/openrouter");
+const StoryEngine = require("../services/studio/engine/storyEngine");
 
 // =========================
 // MAIN CONTROLLER
