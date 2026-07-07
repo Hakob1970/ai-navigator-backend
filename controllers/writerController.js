@@ -1,6 +1,8 @@
 const validation = require("../services/studio/validationService");
 const promptBuilder = require("../services/studio/promptBuilder");
 const openrouter = require("../services/studio/ai/openrouter");
+const StoryEngine = require("../services/studio/engine/storyEngine");
+
 
 // =========================
 // MAIN CONTROLLER
@@ -64,4 +66,37 @@ exports.generate = async (req, res) => {
       error: "INTERNAL_SERVER_ERROR",
     });
   }
+};
+
+
+
+exports.generateBook = async (req, res) => {
+    try {
+
+        const { mode, ...input } = req.body;
+
+        if (mode === "engine") {
+
+            const project = await StoryEngine.start(input);
+
+            return res.json({
+                success: true,
+                mode: "engine",
+                project
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: "Unknown mode"
+        });
+
+    } catch (err) {
+        console.error(err);
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
 };
