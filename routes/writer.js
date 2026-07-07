@@ -4,8 +4,15 @@ const router = express.Router();
 const writerController = require("../controllers/writerController");
 
 // =========================
-// GENERATE ROUTE
+// OLD GENERATE
 // =========================
 router.post("/generate", writerController.generate);
+
+
+// =========================
+// WRITER STUDIO ENGINE
+// =========================
+router.post("/generateBook", writerController.generateBook);
+
 
 module.exports = router;
