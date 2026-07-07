@@ -1,9 +1,9 @@
 module.exports = (formData) => {
 
-  const title = formData?.Title || "Untitled World";
-  const mainCharacter = formData?.["Main Character"] || "Unknown hero";
-  const world = formData?.World || "A mysterious world";
-  const style = formData?.Style || "cinematic and immersive";
+const title = formData?.title || "Untitled World";
+const mainCharacter = formData?.mainCharacter || "Unknown hero";
+const world = formData?.world || "A mysterious world";
+const style = formData?.style || "cinematic and immersive";
 
   // =========================
   // RULES
