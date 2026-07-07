@@ -45,7 +45,7 @@ class ProjectBuilder {
         // =========================
         // 🌍 WORLD (минимально)
         // =========================
-        project.world.name = input.worldName || "";
+       project.world.name = input.world || "";
         project.world.description = input.worldDescription || "";
 
         // =========================
