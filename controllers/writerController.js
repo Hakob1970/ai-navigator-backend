@@ -69,11 +69,15 @@ exports.generate = async (req, res) => {
 };
 
 
-
 exports.generateBook = async (req, res) => {
     try {
 
         const { mode, ...input } = req.body;
+
+
+        // =========================
+        // 🧠 NEW ENGINE MODE
+        // =========================
 
         if (mode === "engine") {
 
@@ -85,6 +89,25 @@ exports.generateBook = async (req, res) => {
                 project
             });
         }
+
+
+        // =========================
+        // 📚 OLD FANTASY MODE (НЕ ТРОГАЕМ)
+        // =========================
+        if (mode === "fantasy") {
+
+            // тут остаётся твоя текущая логика
+            // НЕ меняем её вообще
+
+            const result = await generateFantasyBook(input);
+
+            return res.json({
+                success: true,
+                mode: "fantasy",
+                result
+            });
+        }
+
 
         return res.status(400).json({
             success: false,
