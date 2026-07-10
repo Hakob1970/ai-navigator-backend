@@ -63,10 +63,16 @@ router.get("/check", authMiddleware, async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id = $1`,
-      [email]
-    );
+ const result = await pool.query(
+  `
+  SELECT premium_until
+  FROM subscriptions
+  WHERE user_id = $1
+  AND module = 'ai-navigator'
+  AND status = 'active'
+  `,
+  [email]
+);
 
     const row = result.rows[0];
 
