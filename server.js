@@ -625,7 +625,7 @@ app.post("/api/telegram/create-link", async (req, res) => {
       });
     }
 
-    const premium = await isPremium(email);
+   const premium = await isPremium(email, "ai-navigator");
 
 if (!premium) {
   console.log("BLOCKED USER:", email);
