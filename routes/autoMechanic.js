@@ -120,6 +120,17 @@ router.post("/", authMiddleware, abuseGuard, async (req, res) => {
       return res.status(403).json({ error: "NO_SUBSCRIPTION" });
     }
 
+const now = Date.now();
+
+const premiumUntil = Number(sub.premium_until || 0);
+
+if (premiumUntil <= now) {
+  return res.status(403).json({
+    error: "AUTO_MECHANIC_PREMIUM_EXPIRED"
+  });
+}
+    
+
     if (sub.status !== "active") {
       return res.status(403).json({ error: "AUTO_MECHANIC_PREMIUM_REQUIRED" });
     }
