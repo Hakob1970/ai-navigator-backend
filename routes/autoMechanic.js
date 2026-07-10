@@ -77,6 +77,77 @@ function abuseGuard(req, res, next) {
   next();
 }
 
+
+// =========================
+// AUTO MECHANIC PREMIUM CHECK
+// =========================
+router.get("/check", authMiddleware, async (req, res) => {
+  try {
+
+    const email = req.user?.email;
+
+    if (!email) {
+      return res.status(401).json({
+        premium: false,
+        error: "NO_USER"
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT premium_until, status, requests_left
+      FROM subscriptions
+      WHERE email = $1
+      AND module = 'auto-mechanic'
+      `,
+      [email]
+    );
+
+    const sub = result.rows[0];
+
+    if (!sub) {
+      return res.json({
+        premium: false,
+        daysLeft: 0,
+        requestsLeft: 0
+      });
+    }
+
+
+    const now = Date.now();
+    const premiumUntil = Number(sub.premium_until || 0);
+
+    const isPremium =
+      sub.status === "active" &&
+      premiumUntil > now;
+
+
+    const daysLeft = isPremium
+      ? Math.ceil(
+          (premiumUntil - now) /
+          (1000 * 60 * 60 * 24)
+        )
+      : 0;
+
+
+    return res.json({
+      premium: isPremium,
+      daysLeft,
+      requestsLeft: sub.requests_left || 0
+    });
+
+
+  } catch (err) {
+
+    console.error("AUTO PREMIUM CHECK ERROR:", err);
+
+    return res.status(500).json({
+      premium: false,
+      error: "SERVER_ERROR"
+    });
+  }
+});
+
 // =========================
 // MAIN ROUTE
 // =========================
