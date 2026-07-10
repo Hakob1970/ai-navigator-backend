@@ -568,21 +568,23 @@ app.use(express.static(path.join(__dirname, "public")));
 
 
 
-async function isPremium(email) {
+async function isPremium(email, module) {
 
-    email = decodeURIComponent(email || "")
+  email = decodeURIComponent(email || "")
     .trim()
     .toLowerCase();
 
-  if (!email) return false;
+  if (!email || !module) return false;
 
   const result = await pool.query(
     `
     SELECT premium_until
     FROM subscriptions
     WHERE user_id = $1
+    AND module = $2
+    AND status = 'active'
     `,
-    [email]
+    [email, module]
   );
 
   const row = result.rows[0];
@@ -593,6 +595,7 @@ async function isPremium(email) {
 
   const end = Number(row.premium_until);
 
+  console.log("PREMIUM MODULE:", module);
   console.log("PREMIUM RAW:", row.premium_until);
   console.log("PREMIUM END:", end);
 
@@ -602,7 +605,6 @@ async function isPremium(email) {
 
   return end > Date.now();
 }
-
 
 // =========================
 // TELEGRAM PREMIUM LINK
