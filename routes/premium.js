@@ -81,10 +81,15 @@ router.get("/check", authMiddleware, async (req, res) => {
 
     const isPremium = premiumUntil > now;
 
-    return res.json({
-      premium: isPremium,
-      resetAt: premiumUntil
-    });
+    const daysLeft = premiumUntil > now
+  ? Math.ceil((premiumUntil - now) / (1000 * 60 * 60 * 24))
+  : 0;
+
+ return res.json({
+  premium: isPremium,
+  resetAt: premiumUntil,
+  daysLeft
+});
 
   } catch (err) {
     console.error("PREMIUM CHECK ERROR:", err);
