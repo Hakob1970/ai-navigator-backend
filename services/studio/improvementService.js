@@ -58,6 +58,22 @@ characterEvidence:
         )
     ),
 
+    conflictAnalysis:
+    this.improveConflictAnalysis(
+        project,
+        recommendations.filter(
+            r => r.type === "conflict"
+        )
+    ),
+
+    dialogueAnalysis:
+    this.improveDialogueAnalysis(
+        project,
+        recommendations.filter(
+            r => r.type === "dialogue"
+        )
+    ),
+
 
     plot:
         this.improvePlot(
@@ -334,10 +350,185 @@ static improveSceneAnalysis(
 
     }
 
+  return result;
+}
+
+
+
+
+        // =========================
+        // 💬 DIALOGUE ANALYSIS IMPROVEMENT
+       // =========================
+
+static improveDialogueAnalysis(
+    project,
+    recommendations
+) {
+
+    const result = {
+
+        status:
+            "good",
+
+        actions:
+            []
+
+    };
+
+
+    if (
+        !recommendations ||
+        recommendations.length === 0
+    ) {
+
+        return result;
+
+    }
+
+
+    result.status =
+        "needs_improvement";
+
+
+    recommendations.forEach(
+        recommendation => {
+
+
+            if (
+                recommendation.scenes
+            ) {
+
+
+                recommendation.scenes.forEach(
+                    scene => {
+
+                        result.actions.push({
+
+                            scene:
+                                scene.title ||
+                                scene.id,
+
+
+                            missing:
+                                scene.missing || [],
+
+
+                            suggestions: [
+
+                                "Make dialogue reveal character personality",
+
+                                "Avoid dialogue that only transfers information",
+
+                                "Create stronger interaction between characters",
+
+                                "Use dialogue to increase conflict",
+
+                                "Connect dialogue with character goals and emotions"
+
+                            ]
+
+                        });
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
 
     return result;
 
 }
+
+
+         // =========================
+         // ⚔️ CONFLICT ANALYSIS IMPROVEMENT
+         // =========================
+
+static improveConflictAnalysis(
+    project,
+    recommendations
+) {
+
+    const result = {
+
+        status:
+            "good",
+
+        actions:
+            []
+
+    };
+
+
+    if (
+        !recommendations ||
+        recommendations.length === 0
+    ) {
+
+        return result;
+
+    }
+
+
+    result.status =
+        "needs_improvement";
+
+
+    recommendations.forEach(
+        recommendation => {
+
+
+            if (
+                recommendation.conflicts
+            ) {
+
+
+                recommendation.conflicts.forEach(
+                    conflict => {
+
+                        result.actions.push({
+
+                            character:
+                                conflict.character,
+
+
+                            missing:
+                                conflict.missing || [],
+
+
+                            suggestions: [
+
+                                "Create stronger internal struggle",
+
+                                "Increase external obstacles",
+
+                                "Connect conflict with character motivation",
+
+                                "Show consequences of unresolved conflict",
+
+                                "Use conflict to drive story decisions"
+
+                            ]
+
+                        });
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
+
+    return result;
+
+}
+
+
 
 
           // =========================

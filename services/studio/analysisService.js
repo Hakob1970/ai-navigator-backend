@@ -12,6 +12,12 @@ const CharacterActionAnalyzer =
 const SceneAnalyzer =
     require("./analysis/sceneAnalyzer");
 
+const DialogueAnalyzer =
+    require("./analysis/dialogueAnalyzer");
+
+const ConflictAnalyzer =
+    require("./analysis/conflictAnalyzer");
+
 
 
 class AnalysisService {
@@ -653,6 +659,12 @@ if (
    sceneAnalysis:
        SceneAnalyzer.analyze(project),
 
+   dialogueAnalysis:
+      DialogueAnalyzer.analyze(project),
+
+   conflicts:
+      ConflictAnalyzer.analyze(project),
+
 
     plot:
         this.analyzePlot(project),
@@ -992,6 +1004,11 @@ if (
    sceneAnalysis:
        SceneAnalyzer.analyze(project),
 
+   dialogueAnalysis:
+       DialogueAnalyzer.analyze(project),
+
+   conflicts:
+       ConflictAnalyzer.analyze(project),
 
     plot:
         this.analyzePlot(project),

@@ -14,6 +14,33 @@ let project =
     });
 
 
+project.scenes = [
+
+    {
+        id: "scene_1",
+
+        title: "The First Meeting",
+
+        goal: "",
+
+        conflict: "",
+
+        obstacle: "",
+
+        characters: [
+            "Edward"
+        ],
+
+        dialogue: "",
+
+        outcome: ""
+
+    }
+
+];
+
+
+
 // имитируем работу автора
 project.characters[0].personality.traits.push(
     "brave",
