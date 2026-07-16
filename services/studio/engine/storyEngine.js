@@ -1,6 +1,13 @@
 const ProjectBuilder = require("./projectBuilder");
 const promptBuilder = require("../promptBuilder");
 const OpenRouter = require("../ai/openrouter");
+const MemoryService = require("../memoryService");
+
+const AnalysisService =
+    require("../analysisService");
+
+const ImprovementService =
+    require("../improvementService");
 
 
 class StoryEngine {
@@ -13,9 +20,31 @@ class StoryEngine {
         const project =
             ProjectBuilder.create(input);
 
+        MemoryService.initialize(project);
 
-        project.generation.status =
-            "generating";
+// =========================
+// 🧠 ANALYSIS & IMPROVEMENT
+// =========================
+
+const analysis =
+    AnalysisService.generateReport(project);
+
+
+const improvements =
+    ImprovementService.improveProject(
+        project,
+        analysis.analysis
+    );
+
+project.generation.analysis =
+    analysis;
+
+project.generation.improvements =
+    improvements;
+
+
+project.generation.status =
+    "generating";
 
         project.generation.currentStep =
             "prompt";
@@ -29,7 +58,9 @@ class StoryEngine {
 
                 mode: project.settings.genre,
 
-                formData: input
+                formData: input,
+
+                improvements
             });
 
 
@@ -40,13 +71,25 @@ class StoryEngine {
         // =========================
         // 3. AI GENERATION
         // =========================
-        const result =
-            await OpenRouter.generate({
+        let result;
 
-                prompt,
+if (input.test === true) {
 
-                memory: project.memory
-            });
+    result = `
+TEST MODE
+
+StoryEngine works.
+No OpenRouter request.
+`;
+
+} else {
+
+    result = await OpenRouter.generate({
+        prompt,
+        memory: project.memory
+    });
+
+}
 
 
         // =========================
@@ -68,6 +111,12 @@ class StoryEngine {
         });
 
 
+    MemoryService.addTimelineEvent(
+    project,
+    "Chapter 1 generated"
+); 
+
+
         project.generation.status =
             "completed";
 
@@ -82,3 +131,4 @@ class StoryEngine {
 
 
 module.exports = StoryEngine;
+

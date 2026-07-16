@@ -4,6 +4,11 @@ const title = formData?.title || "Untitled World";
 const mainCharacter = formData?.mainCharacter || "Unknown hero";
 const world = formData?.world || "A mysterious world";
 const style = formData?.style || "cinematic and immersive";
+const improvements =
+    formData?.improvements || null;
+const ImprovementService =
+    require("../../services/studio/improvementService");
+
 
   // =========================
   // RULES
@@ -35,6 +40,25 @@ World: ${world}
 - Make the story engaging and cinematic
 `.trim();
 
+// =========================
+// 🛠️ IMPROVEMENTS
+// =========================
+
+let improvementBlock = "";
+
+if (improvements) {
+
+    improvementBlock = `
+
+${ImprovementService.toPrompt(
+    improvements
+)}
+
+`;
+
+}
+
+
   // =========================
   // FINAL PROMPT
   // =========================
@@ -48,6 +72,8 @@ ${rules}
 
 INPUT:
 ${input}
+
+${improvementBlock}
 
 STORY REQUIREMENTS:
 ${requirements}
