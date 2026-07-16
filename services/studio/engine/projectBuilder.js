@@ -286,6 +286,24 @@ class ProjectBuilder {
     outcome:
         scene.outcome || "",
 
+     // 🧠 SCENE INTELLIGENCE
+
+    decision:
+        scene.decision || "",
+
+    change:
+        scene.change || "",
+
+    consequence:
+        scene.consequence || "",
+
+
+    // ❤️ EMOTIONAL MOVEMENT
+
+    emotionalShift:
+        scene.emotionalShift || "",
+
+
 
     status:
         scene.status || "planned"
@@ -293,6 +311,8 @@ class ProjectBuilder {
 };
          });
         }
+
+
 
            // =========================
            // 🏁 ENDING
