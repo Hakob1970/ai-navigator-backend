@@ -90,12 +90,62 @@ class SceneAnalyzer {
             }
 
 
+          // 🧠 SCENE INTELLIGENCE
+
+
+if (
+    !scene.decision
+) {
+
+    missing.push(
+        "character decision"
+    );
+
+}
+
+
+
+if (
+    !scene.change
+) {
+
+    missing.push(
+        "scene change"
+    );
+
+}
+
+
+
+if (
+    !scene.consequence
+) {
+
+    missing.push(
+        "future consequence"
+    );
+
+}
+
+
+
+if (
+    !scene.emotionalShift
+) {
+
+    missing.push(
+        "emotional shift"
+    );
+
+}
+
+
 
             const completeness =
-                Math.max(
-                    0,
-                    100 - (missing.length * 25)
-                );
+    Math.max(
+        0,
+        100 - (missing.length * 12)
+    );
 
 
 

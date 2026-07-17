@@ -18,6 +18,15 @@ const DialogueAnalyzer =
 const ConflictAnalyzer =
     require("./analysis/conflictAnalyzer");
 
+const MemoryAnalyzer =
+    require("./analysis/memoryAnalyzer");
+
+const ContinuityAnalyzer =
+    require("./analysis/continuityAnalyzer");
+
+const StoryLogicAnalyzer =
+    require("./analysis/storyLogicAnalyzer");
+
 
 
 class AnalysisService {
@@ -665,6 +674,13 @@ if (
    conflicts:
       ConflictAnalyzer.analyze(project),
 
+   memoryAnalysis:
+        MemoryAnalyzer.analyze(project),
+
+   storyLogic:
+
+    StoryLogicAnalyzer.analyze(project),
+
 
     plot:
         this.analyzePlot(project),
@@ -672,6 +688,9 @@ if (
 
     memory:
         this.analyzeMemory(project),
+
+    continuity:
+        ContinuityAnalyzer.analyze(project),
 
 
     quality:
@@ -855,6 +874,175 @@ if (
 
 
       // =========================
+     // 🧠 MEMORY ANALYSIS
+     // =========================
+
+const memoryAnalysis =
+    report.analysis.memoryAnalysis;
+
+
+if (
+    memoryAnalysis &&
+    memoryAnalysis.issues &&
+    memoryAnalysis.issues.length > 0
+) {
+
+
+    report.recommendations.push({
+
+        type:
+            "memory_analysis",
+
+        message:
+            "Story continuity memory requires improvement.",
+
+
+        issues:
+            memoryAnalysis.issues.map(
+                issue => ({
+
+                    type:
+                        issue.type,
+
+
+                    missing:
+                        issue.missing,
+
+
+                    suggestions: [
+
+                        "Track important events and their consequences",
+
+                        "Maintain consistency of character knowledge",
+
+                        "Remember unresolved conflicts",
+
+                        "Preserve timeline continuity"
+
+                    ]
+
+                })
+            )
+
+    });
+
+}
+
+
+       // =========================
+       // 🔄 CONTINUITY ANALYSIS
+       // =========================
+
+const continuityAnalysis =
+    report.analysis.continuity;
+
+
+if (
+    continuityAnalysis &&
+    continuityAnalysis.issues &&
+    continuityAnalysis.issues.length > 0
+) {
+
+
+    report.recommendations.push({
+
+        type:
+            "continuity",
+
+        message:
+            "Story continuity requires improvement.",
+
+
+        issues:
+            continuityAnalysis.issues.map(
+                issue => ({
+
+                    type:
+                        issue.type,
+
+
+                    description:
+                        issue.description,
+
+
+                    suggestions: [
+
+                        "Check timeline consistency",
+
+                        "Maintain character knowledge consistency",
+
+                        "Track relationship changes",
+
+                        "Connect previous events with future consequences"
+
+                    ]
+
+                })
+            )
+
+    });
+
+}
+
+
+             // =========================
+             // 🧠 STORY LOGIC ANALYSIS
+            // =========================
+
+const storyLogicAnalysis =
+    report.analysis.storyLogic;
+
+
+if (
+    storyLogicAnalysis &&
+    storyLogicAnalysis.issues &&
+    storyLogicAnalysis.issues.length > 0
+) {
+
+
+    report.recommendations.push({
+
+        type:
+            "story_logic",
+
+
+        message:
+            "Story logic requires improvement.",
+
+
+        issues:
+            storyLogicAnalysis.issues.map(
+                issue => ({
+
+                    type:
+                        issue.type,
+
+
+                    description:
+                        issue.description,
+
+
+                    suggestions: [
+
+                        "Strengthen cause and effect between events",
+
+                        "Connect character decisions with story consequences",
+
+                        "Avoid events without motivation",
+
+                        "Maintain logical progression of the story"
+
+                    ]
+
+                })
+            )
+
+    });
+
+}
+
+
+      // =========================
      // 🎬 CHARACTER ACTIONS
      // =========================
 
@@ -1010,11 +1198,22 @@ if (
    conflicts:
        ConflictAnalyzer.analyze(project),
 
+   memoryAnalysis:
+        MemoryAnalyzer.analyze(project),
+
+   continuity:
+        ContinuityAnalyzer.analyze(project),
+
+   storyLogic:
+
+    StoryLogicAnalyzer.analyze(project),
+
     plot:
         this.analyzePlot(project),
 
     memory:
         this.analyzeMemory(project)
+
 
 };
 

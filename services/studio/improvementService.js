@@ -92,6 +92,30 @@ characterEvidence:
             )
         ),
 
+    memoryAnalysis:
+    this.improveMemoryAnalysis(
+        project,
+        recommendations.filter(
+            r => r.type === "memory_analysis"
+        )
+    ),
+
+    continuity:
+    this.improveContinuity(
+        project,
+        recommendations.filter(
+            r => r.type === "continuity"
+        )
+    ),
+
+    storyLogic:
+    this.improveStoryLogic(
+        project,
+        recommendations.filter(
+            r => r.type === "story_logic"
+        )
+    ),
+
 
     quality:
     this.improveQuality(
@@ -737,7 +761,181 @@ return result;
 }
 
 
+      // =========================
+      // 🧠 MEMORY ANALYSIS IMPROVEMENT
+      // =========================
 
+static improveMemoryAnalysis(
+    project,
+    recommendations
+) {
+
+    const result = {
+
+        status:
+            "good",
+
+        actions:
+            []
+
+    };
+
+
+    if (
+        recommendations &&
+        recommendations.length > 0
+    ) {
+
+        result.status =
+            "needs_improvement";
+
+
+        recommendations.forEach(
+            recommendation => {
+
+
+                if (
+                    !recommendation.issues
+                ) {
+                    return;
+                }
+
+
+                recommendation.issues.forEach(
+                    issue => {
+
+
+                        result.actions.push({
+
+                            type:
+                                issue.type,
+
+
+                            missing:
+                                issue.missing,
+
+
+                            suggestions: [
+
+                                "Create timeline of important events",
+
+                                "Track consequences of character decisions",
+
+                                "Maintain consistency of character knowledge",
+
+                                "Connect past events with future chapters"
+
+                            ]
+
+                        });
+
+
+                    }
+                );
+
+
+            }
+        );
+
+
+    }
+
+
+    return result;
+
+}
+
+
+        static improveContinuity(project, recommendations) {
+
+
+    if (
+        !recommendations ||
+        recommendations.length === 0
+    ) {
+
+        return {
+
+            status: "good",
+
+            actions: []
+
+        };
+
+    }
+
+
+    return {
+
+        status:
+            "needs_improvement",
+
+
+        actions:
+            recommendations.map(item => ({
+
+                issues:
+                    item.issues || [],
+
+
+                suggestions: [
+
+                    "Maintain timeline consistency",
+
+                    "Track character knowledge changes",
+
+                    "Preserve world rules",
+
+                    "Connect past events with future consequences"
+
+                ]
+
+            }))
+
+    };
+
+}
+
+
+
+          // =========================
+         // 🧠 STORY LOGIC / CONTINUITY
+         // =========================
+
+    static improveStoryLogic(project, recommendations) {
+
+        return {
+
+            status:
+                recommendations.length > 0
+                    ? "needs_improvement"
+                    : "good",
+
+            actions:
+
+                recommendations.map(item => ({
+
+                    issues:
+                        item.issues || [],
+
+
+                    suggestions: [
+
+                        "Maintain timeline consistency",
+
+                        "Track character knowledge changes",
+
+                        "Preserve world rules",
+
+                        "Connect past events with future consequences"
+
+                    ]
+
+                }))
+
+        };
+
+    }
 
 
     // =========================
