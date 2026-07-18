@@ -7,6 +7,15 @@ const AnalysisService =
 const ImprovementService =
     require("../../services/studio/improvementService");
 
+const ImprovementPlanner =
+    require("../../services/studio/improvementPlanner");
+
+const PriorityPlanner =
+    require("../../services/studio/priorityPlanner");
+
+const ImprovementExecutor =
+    require("../../services/studio/improvementExecutor");
+
 
 let project =
     ProjectBuilder.create({
@@ -97,6 +106,49 @@ const improvements =
         project,
         report
     );
+
+const tasks =
+    ImprovementPlanner.createTasks(
+        project,
+        improvements
+    );
+
+const prioritizedTasks =
+    PriorityPlanner.sort(tasks);
+
+const proposals =
+    ImprovementExecutor.createProposals(
+    project,
+    tasks
+);
+
+
+console.log(
+    JSON.stringify(
+        proposals,
+        null,
+        2
+    )
+);
+
+
+console.log(
+    JSON.stringify(
+        prioritizedTasks,
+        null,
+        2
+    )
+);
+
+
+console.log(
+    JSON.stringify(
+        tasks,
+        null,
+        2
+    )
+);
+
 
 console.log(
     JSON.stringify(

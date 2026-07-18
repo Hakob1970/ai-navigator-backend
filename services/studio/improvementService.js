@@ -45,7 +45,7 @@ characterEvidence:
         this.improveCharacterActions(
             project,
             recommendations.filter(
-               r => r.type === "character_actions"
+               r => r.type === "character_action"
         )
     ),
 
@@ -984,6 +984,233 @@ static improveMemoryAnalysis(
 
     }
 
+
+        // =========================
+        // 🔄 BUILD IMPROVEMENT TASKS
+       // =========================
+
+static buildImprovementTasks(report) {
+
+    const tasks = [];
+
+
+    const recommendations =
+        report.recommendations || [];
+
+
+
+    recommendations.forEach(item => {
+
+
+
+        // 🎭 CHARACTER
+
+        if (item.type === "character") {
+
+
+           const characters =
+            item.characters ||
+            [
+                {
+                    name:
+                        item.character,
+
+                    missing:
+                        item.target
+                        ? [item.target]
+                        : []
+                }
+            ];
+
+
+            characters.forEach(character => {
+
+
+                character.missing.forEach(target => {
+
+
+                    tasks.push({
+
+                        type:
+                            "character",
+
+                        character:
+                            character.name,
+
+                        target,
+
+                        priority:
+                            item.priority || 70,
+
+                        priorityScore:
+                            item.priority || 70
+
+                    });
+
+
+                });
+
+
+            });
+
+
+        }
+
+
+
+
+
+        // 🎭 CHARACTER ACTION
+
+        else if (
+            item.type === "character_action"
+        ) {
+
+
+             const characters =
+    item.characters ||
+    [
+        {
+            name:
+                item.character,
+
+            missing:
+                item.target
+                ? [item.target]
+                : []
+        }
+    ];
+
+
+            characters.forEach(character => {
+
+
+                tasks.push({
+
+                    type:
+                        "character_action",
+
+                    character:
+                        character.name,
+
+                    priority:
+                        80,
+
+                    priorityScore:
+                        80
+
+                });
+
+
+            });
+
+
+        }
+
+
+
+
+
+        // 🎬 SCENE
+
+        else if (
+            item.type === "scene"
+        ) {
+
+
+            tasks.push({
+
+                type:
+                    "scene",
+
+                scene:
+                    item.scene,
+
+                target:
+                    item.target,
+
+                priority:
+                    60,
+
+                priorityScore:
+                    60
+
+            });
+
+
+        }
+
+
+
+
+
+        // 🧩 STORY LOGIC
+
+        else if (
+            item.type === "story_logic"
+        ) {
+
+
+            tasks.push({
+
+                type:
+                    "story_logic",
+
+                target:
+                    item.target ||
+                    "unresolved_thread",
+
+                priority:
+                    100,
+
+                priorityScore:
+                    100
+
+            });
+
+
+        }
+
+
+
+
+
+        // 🧠 MEMORY
+
+        else if (
+            item.type === "memory" ||
+            item.type === "continuity"
+        ) {
+
+
+            tasks.push({
+
+                type:
+                    item.type,
+
+                target:
+                    item.target ||
+                    "timeline",
+
+                priority:
+                    90,
+
+                priorityScore:
+                    90
+
+            });
+
+
+        }
+
+
+    });
+
+
+
+    return tasks;
+
+}
 
     // =========================
     // 📝 TO PROMPT

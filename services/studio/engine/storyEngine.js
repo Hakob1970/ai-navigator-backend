@@ -9,6 +9,9 @@ const AnalysisService =
 const ImprovementService =
     require("../improvementService");
 
+const ImprovementPlanner =
+    require("../improvementPlanner");
+
 
 class StoryEngine {
 
@@ -36,15 +39,25 @@ const improvements =
         analysis.analysis
     );
 
+const tasks =
+    ImprovementPlanner.createTasks(
+        project,
+        improvements
+    );
+
 project.generation.analysis =
     analysis;
 
 project.generation.improvements =
     improvements;
 
+project.generation.tasks =
+    tasks;
+
 
 project.generation.status =
     "generating";
+
 
         project.generation.currentStep =
             "prompt";
