@@ -18,7 +18,9 @@ class ImprovementApproval {
 
         return {
             ...proposal,
-            status: "approved"
+            status: "approved",
+             approvedAt:
+                 new Date().toISOString()
         };
 
     }
@@ -31,7 +33,9 @@ class ImprovementApproval {
 
         return {
             ...proposal,
-            status: "rejected"
+            status: "rejected",
+            rejectedAt:
+                new Date().toISOString()
         };
 
     }

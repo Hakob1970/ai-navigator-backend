@@ -11,6 +11,12 @@ const ImprovementPlanner =
 const ImprovementExecutor =
     require("./improvementExecutor");
 
+const ImprovementApproval =
+    require("./improvementApproval");
+
+const ImprovementHistoryService =
+    require("./improvementHistoryService");
+
 
 
 
@@ -244,6 +250,69 @@ result.stages.push({
 
     data:
         proposals
+
+});
+
+
+
+          // =====================
+         // APPROVAL
+        // =====================
+
+const approvedProposals =
+    ImprovementApproval.approveAll(
+        proposals
+    );
+
+result.stages.push({
+
+    stage:
+        "approval",
+
+    status:
+        "completed",
+
+    data:
+        approvedProposals
+
+});
+
+
+
+         // =====================
+         // HISTORY
+        // =====================
+
+approvedProposals.forEach(
+    proposal => {
+
+        const record =
+            ImprovementHistoryService
+                .createRecord(
+                    proposal,
+                    "approved"
+                );
+
+        ImprovementHistoryService
+            .add(
+                project,
+                record
+            );
+
+    }
+);
+
+result.stages.push({
+
+    stage:
+        "history",
+
+    status:
+        "completed",
+
+    data:
+        ImprovementHistoryService
+            .getHistory(project)
 
 });
 
