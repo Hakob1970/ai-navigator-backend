@@ -307,12 +307,12 @@ else if (
 
                     priority:
 
-                 PriorityService.getLevel(
-                     task.priorityScore
-),
+ PriorityService.getLevel(
+     task.priority || task.priorityScore
+ ),
 
 priorityScore:
-    task.priorityScore || 0,
+    task.priority || task.priorityScore || 0,
 
         createdAt:
             new Date().toISOString(),

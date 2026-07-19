@@ -8,6 +8,11 @@ const PriorityPlanner =
 const ImprovementPlanner =
     require("./improvementPlanner");
 
+const ImprovementExecutor =
+    require("./improvementExecutor");
+
+
+
 
 class LiteraryBrain {
 
@@ -211,6 +216,34 @@ result.stages.push({
 
     data:
         improvements
+
+});
+
+
+         // =====================
+         // EXECUTION PROPOSALS
+         // =====================
+
+
+const proposals =
+    ImprovementExecutor.createProposals(
+        project,
+        improvements
+    );
+
+
+result.stages.push({
+
+    stage:
+        "execution",
+
+
+    status:
+        "completed",
+
+
+    data:
+        proposals
 
 });
 
