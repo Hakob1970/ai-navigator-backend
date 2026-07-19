@@ -194,8 +194,8 @@ if (
 
 
          // =========================
-        // 🧩 STORY LOGIC
-       // =========================
+         // 🧩 STORY LOGIC
+         // =========================
 
 if (
     improvements.storyLogic &&
@@ -205,30 +205,20 @@ if (
     improvements.storyLogic.actions.forEach(
         action => {
 
-            if (
-                action.issues
-            ) {
 
-                action.issues.forEach(
-                    issue => {
+            tasks.push({
 
-                        tasks.push({
+                type:
+                    "story_logic",
 
-                            type:
-                                "story_logic",
+                target:
+                    action.type,
 
-                            target:
-                                issue.type,
+                task:
+                    `Fix story logic: ${action.missing}`
 
-                            task:
-                                `Fix story logic: ${issue.description}`
+            });
 
-                        });
-
-                    }
-                );
-
-            }
 
         }
     );
