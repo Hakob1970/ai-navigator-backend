@@ -207,6 +207,9 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             email = res.json().get("email")
 
+            print("TELEGRAM ID:", user_id)
+            print("FOUND EMAIL:", email)
+
             if not email:
                 await update.message.reply_text(
                     "🔒 Discussion Club is for Premium users only\n\n"
