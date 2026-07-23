@@ -13,6 +13,9 @@ print("=== START OF FILE ===", flush=True)
 
 print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
+print("PID:", os.getpid(), flush=True)
+import os
+
 
 TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
