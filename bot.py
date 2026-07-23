@@ -10,6 +10,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 import os
 
 print("BOT STARTING...")
+print("🔥 DEBUG VERSION 777")
 
 TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
