@@ -229,6 +229,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data = res.json()
             premium = bool(data.get("premium"))
 
+            print("PREMIUM RESPONSE:", data)
+
             # 3. доступ
             if premium:
                 await update.message.reply_text(
