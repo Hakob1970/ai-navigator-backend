@@ -276,6 +276,7 @@ def main():
 
     print("=== BEFORE POLLING ===", flush=True)
     print("🤖 Bot running clean version...", flush=True)
+    print("PID:", os.getpid(), flush=True)
     
     app.run_polling(drop_pending_updates=True)
 
