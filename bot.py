@@ -9,6 +9,8 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 import os
 
+print("=== START OF FILE ===", flush=True)
+
 print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
 
@@ -272,7 +274,9 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-    print("🤖 Bot running clean version...")
+    print("=== BEFORE POLLING ===", flush=True)
+    print("🤖 Bot running clean version...", flush=True)
+    
     app.run_polling(drop_pending_updates=True)
 
 
