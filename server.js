@@ -647,8 +647,7 @@ app.get("/api/bot/premium", async (req, res) => {
 
     if (!email) {
       return res.json({
-        premium:false,
-        module
+        premium:false
       });
     }
 
@@ -658,8 +657,8 @@ app.get("/api/bot/premium", async (req, res) => {
       SELECT premium_until
       FROM subscriptions
       WHERE user_id=$1
-        AND module=$2
-        AND status='active'
+      AND module=$2
+      AND status='active'
       LIMIT 1
       `,
       [
@@ -669,30 +668,26 @@ app.get("/api/bot/premium", async (req, res) => {
     );
 
 
-    const row=result.rows[0];
-
-
-    if(!row?.premium_until){
-      return res.json({
-        premium:false,
-        module
-      });
-    }
+    const row = result.rows[0];
 
 
     return res.json({
-      premium:Number(row.premium_until)>Date.now(),
+      premium:
+        !!row &&
+        Number(row.premium_until) > Date.now(),
+
       module
     });
 
 
   } catch(err){
 
-    console.error("BOT PREMIUM ERROR:",err);
+    console.error("BOT PREMIUM ERROR:", err);
 
     return res.json({
       premium:false
     });
+
   }
 });
 // =========================
