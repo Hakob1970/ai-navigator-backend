@@ -644,7 +644,14 @@ app.get("/api/bot/premium", async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
+      `
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_id = $1
+        AND module = 'ai-navigator'
+        AND status = 'active'
+      LIMIT 1
+      `,
       [email]
     );
 
