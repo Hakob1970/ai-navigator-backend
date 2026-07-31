@@ -11,6 +11,7 @@ import os
 
 print("=== START OF FILE ===", flush=True)
 
+print("🛡 SECURITY TEST VERSION", flush=True)
 print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
 print("PID:", os.getpid(), flush=True)
