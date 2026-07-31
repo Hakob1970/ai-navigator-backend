@@ -16,6 +16,8 @@ print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
 print("PID:", os.getpid(), flush=True)
 
+import logging
+
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
