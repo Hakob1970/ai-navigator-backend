@@ -23,6 +23,42 @@ ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
 
+def check_webhook():
+
+    try:
+
+        res = requests.get(
+            f"https://api.telegram.org/bot{TOKEN}/getWebhookInfo",
+            timeout=10
+        )
+
+        data = res.json()
+
+        url = data.get(
+            "result",
+            {}
+        ).get(
+            "url",
+            ""
+        )
+
+        if url:
+
+            print("🚨 SECURITY ALERT")
+            print("WEBHOOK DETECTED:", url)
+
+        else:
+
+            print("🛡 WEBHOOK CHECK PASSED")
+
+    except Exception as e:
+
+        print(
+            "⚠️ WEBHOOK CHECK FAILED:",
+            e
+        )
+
+
 def link_telegram(email, telegram_id):
     try:
         res = requests.post(
@@ -271,6 +307,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN 
 # =========================
 def main():
+    check_webhook()
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("menu", show_menu))
