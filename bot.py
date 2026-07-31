@@ -308,6 +308,10 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # MAIN 
 # =========================
 def main():
+
+    print("🚀 BOT INSTANCE STARTED", flush=True)
+
+    
     check_webhook()
     app = Application.builder().token(TOKEN).build()
 
@@ -319,7 +323,10 @@ def main():
     print("🤖 Bot running clean version...", flush=True)
     print("PID:", os.getpid(), flush=True)
     
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(
+    drop_pending_updates=True,
+    close_loop=False
+)
 
 
 if __name__ == "__main__":
