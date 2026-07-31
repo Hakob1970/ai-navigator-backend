@@ -186,7 +186,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     logger.info(
-        f"BUTTON CLICK | user_id={user_id} | text={text}"
+        f"START COMMAND | user_id={user_id}"
+
     )
     
     username = update.effective_user.username or "user"
