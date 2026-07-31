@@ -15,7 +15,14 @@ print("🛡 SECURITY TEST VERSION", flush=True)
 print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
 print("PID:", os.getpid(), flush=True)
-import os
+
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+
 
 
 TOKEN = os.environ["BOT_TOKEN"]
@@ -175,6 +182,11 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
+
+    logger.info(
+        f"BUTTON CLICK | user_id={user_id} | text={text}"
+    )
+    
     username = update.effective_user.username or "user"
 
     register_user(user_id, username)
@@ -304,6 +316,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     await update.message.reply_text("Use the menu 👇")
 
+
+async def error_handler(update, context):
+    logger.error(
+        f"ERROR: {context.error}"
+    )
+
 # =========================
 # MAIN 
 # =========================
@@ -314,6 +332,8 @@ def main():
     
     check_webhook()
     app = Application.builder().token(TOKEN).build()
+
+    app.add_error_handler(error_handler)
 
     app.add_handler(CommandHandler("menu", show_menu))
     app.add_handler(CommandHandler("start", start))
