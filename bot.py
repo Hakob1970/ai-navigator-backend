@@ -23,6 +23,8 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
@@ -233,9 +235,9 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
-    print("🔥 HANDLE ENTERED")
-    print("CLICKED TEXT:", text)
-    print("TEXT RECEIVED:", repr(text))
+    logger.info("🔥 HANDLE ENTERED")
+    logger.info(f"CLICKED TEXT: {text}")
+    logger.info(f"TEXT RECEIVED: {repr(text)}")
 
     register_user(user_id, username)
 
