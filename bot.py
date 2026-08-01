@@ -11,6 +11,8 @@ logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("telegram").setLevel(logging.ERROR)
 logging.getLogger("telegram.ext").setLevel(logging.ERROR)
 
+logger = logging.getLogger(__name__)
+
 
 import requests
 import asyncio
