@@ -1,13 +1,5 @@
 import os
 import logging
-import requests
-import asyncio
-import feedparser
-import time
-
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -19,8 +11,15 @@ logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("telegram").setLevel(logging.ERROR)
 logging.getLogger("telegram.ext").setLevel(logging.ERROR)
 
-logger = logging.getLogger(__name__)
 
+import requests
+import asyncio
+import feedparser
+import time
+
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 print("=== START OF FILE ===", flush=True)
 
