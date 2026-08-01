@@ -1,3 +1,5 @@
+import os
+import logging
 import requests
 import asyncio
 import feedparser
@@ -7,7 +9,18 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-import os
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.WARNING
+)
+
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("httpcore").setLevel(logging.ERROR)
+logging.getLogger("telegram").setLevel(logging.ERROR)
+logging.getLogger("telegram.ext").setLevel(logging.ERROR)
+
+logger = logging.getLogger(__name__)
+
 
 print("=== START OF FILE ===", flush=True)
 
@@ -15,20 +28,6 @@ print("🛡 SECURITY TEST VERSION", flush=True)
 print("BOT STARTING...")
 print("🔥 DEBUG VERSION 777")
 print("PID:", os.getpid(), flush=True)
-
-import logging
-
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.WARNING
-)
-
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-
-logger = logging.getLogger(__name__)
-
-
 
 TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
@@ -268,8 +267,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             email = res.json().get("email")
 
-            print("TELEGRAM ID:", user_id)
-            print("FOUND EMAIL:", email)
+            logger.debug("Telegram user checked")
 
             if not email:
                 await update.message.reply_text(
@@ -289,7 +287,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data = res.json()
             premium = bool(data.get("premium"))
 
-            print("PREMIUM RESPONSE:", data)
+            logger.debug("Premium status checked")
 
             # 3. доступ
             if premium:
