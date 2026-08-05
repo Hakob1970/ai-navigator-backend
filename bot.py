@@ -497,8 +497,11 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reply", admin_reply))
     app.add_handler(
-    CallbackQueryHandler(reply_callback, pattern="^reply:")
-)
+        CallbackQueryHandler(
+            reply_callback,
+            pattern="^reply:"
+        )
+    )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
     print("=== BEFORE POLLING ===", flush=True)
