@@ -345,14 +345,14 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
          SUPPORT_MODE.remove(user_id)
 
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "✉️ Reply",
-                    callback_data=f"reply:{user_id}"
-                )
-            ]
-        ])
+         keyboard = InlineKeyboardMarkup([
+             [
+                 InlineKeyboardButton(
+                     "✉️ Reply",
+                     callback_data=f"reply:{user_id}"
+                 )
+             ]
+         ])
 
          await context.bot.send_message(
              chat_id=int(ADMIN_ID),
