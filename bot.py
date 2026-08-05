@@ -168,6 +168,7 @@ def menu(lang):
     return ReplyKeyboardMarkup([
         ["📰 AI News"],
         ["💬 Discussion Club"]
+        ["🛠 Support"]
     ], resize_keyboard=True,
        is_persistent=True)
 
@@ -241,6 +242,19 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"TEXT RECEIVED: {repr(text)}")
 
     register_user(user_id, username)
+
+        # =========================
+    # SUPPORT MENU
+    # =========================
+    if text == "🛠 Support":
+
+        await update.message.reply_text(
+            "✍️ Describe your problem. Support will receive your message."
+        )
+
+        context.user_data["support_mode"] = True
+
+        return
 
     # =========================
     # NEWS
