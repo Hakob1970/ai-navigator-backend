@@ -354,6 +354,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
              ]
          ])
 
+         print("KEYBOARD CREATED")
+
          await context.bot.send_message(
              chat_id=int(ADMIN_ID),
              text=(
@@ -364,6 +366,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
              ),
              reply_markup=keyboard
          )
+
+         print("MESSAGE WITH BUTTON SENT")
 
          await update.message.reply_text(
              "✅ Your message was sent to support."
