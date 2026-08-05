@@ -366,6 +366,44 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
     await update.message.reply_text("Use the menu 👇")
 
+# =========================
+# ADMIN REPLY
+# =========================
+async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    user_id = update.effective_user.id
+
+    if user_id != int(ADMIN_ID):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Usage:\n/reply USER_ID message"
+        )
+        return
+
+    target_user = context.args[0]
+    message = " ".join(context.args[1:])
+
+    try:
+        await context.bot.send_message(
+            chat_id=int(target_user),
+            text=(
+                "🛠 Support reply:\n\n"
+                f"{message}"
+            )
+        )
+
+        await update.message.reply_text(
+        "✅ Reply sent"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(
+            f"❌ Error: {e}"
+        )
+
+
 
 async def error_handler(update, context):
     logger.error(
@@ -387,6 +425,7 @@ def main():
 
     app.add_handler(CommandHandler("menu", show_menu))
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reply", admin_reply))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
     print("=== BEFORE POLLING ===", flush=True)
