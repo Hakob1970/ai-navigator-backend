@@ -22,6 +22,7 @@ import time
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 print("=== START OF FILE ===", flush=True)
 
@@ -344,6 +345,15 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
          SUPPORT_MODE.remove(user_id)
 
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "✉️ Reply",
+                    callback_data=f"reply:{user_id}"
+                )
+            ]
+        ])
+
          await context.bot.send_message(
              chat_id=int(ADMIN_ID),
              text=(
@@ -351,7 +361,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  f"👤 User ID: {user_id}\n"
                  f"📛 Username: @{username}\n\n"
                  f"💬 Message:\n{text}"
-             )
+             ),
+             reply_markup=keyboard
          )
 
          await update.message.reply_text(
