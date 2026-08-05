@@ -328,7 +328,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "⚠️ Server error. Try again later."
             )
-
+            return
 
         # =========================
         # SUPPORT
@@ -336,6 +336,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text == "🛠 Support":
         
             SUPPORT_MODE.add(user_id)
+
+            print("SUPPORT MODE ADD:", SUPPORT_MODE)
         
             await update.message.reply_text(
                 "🛠 Support\n\n"
@@ -345,11 +347,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-
+    print("SUPPORT CHECK:", user_id, SUPPORT_MODE)
     # =========================
     # SUPPORT MESSAGE
     # =========================
     if user_id in SUPPORT_MODE:
+         print("SUPPORT MODE ACTIVE:", user_id)
 
          SUPPORT_MODE.remove(user_id)
 
