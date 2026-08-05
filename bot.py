@@ -20,7 +20,14 @@ import feedparser
 import time
 
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    CallbackQueryHandler,
+    filters
+)
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -38,6 +45,7 @@ BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
 
 SUPPORT_MODE = set()
+ADMIN_REPLY_MODE = {}
 
 def check_webhook():
 
@@ -240,6 +248,30 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
+    # =========================
+    # ADMIN REPLY MODE
+    # =========================
+
+if user_id == int(ADMIN_ID) and user_id in ADMIN_REPLY_MODE:
+
+    target_user = ADMIN_REPLY_MODE[user_id]
+
+    await context.bot.send_message(
+        chat_id=int(target_user),
+        text=(
+            "🛠 Support reply:\n\n"
+            f"{text}"
+        )
+    )
+
+    del ADMIN_REPLY_MODE[user_id]
+
+    await update.message.reply_text(
+        "✅ Reply sent"
+    )
+
+    return
+
     logger.info("🔥 HANDLE ENTERED")
     logger.info(f"CLICKED TEXT: {text}")
     logger.info(f"TEXT RECEIVED: {repr(text)}")
@@ -419,6 +451,29 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+# =========================
+# ADMIN REPLY BUTTON
+# =========================
+async def reply_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    admin_id = query.from_user.id
+
+    if admin_id != int(ADMIN_ID):
+        return
+
+    user_id = query.data.split(":")[1]
+
+    ADMIN_REPLY_MODE[admin_id] = user_id
+
+    await query.message.reply_text(
+        "✍️ Write your reply message:"
+    )
+
+
 
 async def error_handler(update, context):
     logger.error(
@@ -441,6 +496,9 @@ def main():
     app.add_handler(CommandHandler("menu", show_menu))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reply", admin_reply))
+    app.add_handler(
+    CallbackQueryHandler(reply_callback, pattern="^reply:")
+)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
     print("=== BEFORE POLLING ===", flush=True)
