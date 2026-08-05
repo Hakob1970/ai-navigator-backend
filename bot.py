@@ -244,19 +244,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"TEXT RECEIVED: {repr(text)}")
 
     register_user(user_id, username)
-
-        # =========================
-    # SUPPORT MENU
-    # =========================
-    if text == "🛠 Support":
-
-        await update.message.reply_text(
-            "✍️ Describe your problem. Support will receive your message."
-        )
-
-        context.user_data["support_mode"] = True
-
-        return
+    
 
     # =========================
     # NEWS
@@ -333,19 +321,19 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # =========================
         # SUPPORT
         # =========================
-        if text == "🛠 Support":
+    if text == "🛠 Support":
         
-            SUPPORT_MODE.add(user_id)
+        SUPPORT_MODE.add(user_id)
 
-            print("SUPPORT MODE ADD:", SUPPORT_MODE)
+        print("SUPPORT MODE ADD:", SUPPORT_MODE)
         
-            await update.message.reply_text(
-                "🛠 Support\n\n"
-                "Please describe your problem.\n"
-                "Your message will be sent to support."
-            )
+        await update.message.reply_text(
+            "🛠 Support\n\n"
+            "Please describe your problem.\n"
+            "Your message will be sent to support."
+        )
 
-            return
+        return
 
     print("SUPPORT CHECK:", user_id, SUPPORT_MODE)
     # =========================
