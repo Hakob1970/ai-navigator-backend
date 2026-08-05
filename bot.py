@@ -36,6 +36,8 @@ ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
 
 
+SUPPORT_MODE = set()
+
 def check_webhook():
 
     try:
@@ -328,6 +330,46 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         return
+
+
+        # =========================
+    # SUPPORT
+    # =========================
+    if text == "🛠 Support":
+        
+        SUPPORT_MODE.add(user_id)
+        
+        await update.message.reply_text(
+            "🛠 Support\n\n"
+            "Please describe your problem.\n"
+            "Your message will be sent to support."
+        )
+
+        return
+
+
+    # =========================
+# SUPPORT MESSAGE
+# =========================
+if user_id in SUPPORT_MODE:
+
+    SUPPORT_MODE.remove(user_id)
+
+    await context.bot.send_message(
+        chat_id=int(ADMIN_ID),
+        text=(
+            "🛠 NEW SUPPORT MESSAGE\n\n"
+            f"👤 User ID: {user_id}\n"
+            f"📛 Username: @{username}\n\n"
+            f"💬 Message:\n{text}"
+        )
+    )
+
+    await update.message.reply_text(
+        "✅ Your message was sent to support."
+    )
+
+    return
     
             
     # =========================
