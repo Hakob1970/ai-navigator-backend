@@ -252,25 +252,25 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ADMIN REPLY MODE
     # =========================
 
-if user_id == int(ADMIN_ID) and user_id in ADMIN_REPLY_MODE:
+    if user_id == int(ADMIN_ID) and user_id in ADMIN_REPLY_MODE:
 
-    target_user = ADMIN_REPLY_MODE[user_id]
+        target_user = ADMIN_REPLY_MODE[user_id]
 
-    await context.bot.send_message(
-        chat_id=int(target_user),
-        text=(
-            "🛠 Support reply:\n\n"
-            f"{text}"
+        await context.bot.send_message(
+            chat_id=int(target_user),
+            text=(
+                "🛠 Support reply:\n\n"
+                f"{text}"
+            )
         )
-    )
 
-    del ADMIN_REPLY_MODE[user_id]
+        del ADMIN_REPLY_MODE[user_id]
 
-    await update.message.reply_text(
-        "✅ Reply sent"
-    )
+        await update.message.reply_text(
+            "✅ Reply sent"
+        )
 
-    return
+        return
 
     logger.info("🔥 HANDLE ENTERED")
     logger.info(f"CLICKED TEXT: {text}")
