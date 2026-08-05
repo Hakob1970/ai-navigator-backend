@@ -167,7 +167,7 @@ def is_premium(email):
 def menu(lang):
     return ReplyKeyboardMarkup([
         ["📰 AI News"],
-        ["💬 Discussion Club"]
+        ["💬 Discussion Club"],
         ["🛠 Support"]
     ], resize_keyboard=True,
        is_persistent=True)
