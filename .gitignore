@@ -4,3 +4,4 @@ database.db
 navigator.db
 .env
 node_modules
+venv/

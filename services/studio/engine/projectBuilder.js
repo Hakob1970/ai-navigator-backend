@@ -158,24 +158,7 @@ class ProjectBuilder {
 
           else {
 
-    project.characters = [
-
-        this._createCharacter({
-            name: "Edward",
-            role: "protagonist"
-        }),
-
-        this._createCharacter({
-            name: "William",
-            role: "antagonist"
-        }),
-
-        this._createCharacter({
-            name: "Eleanor",
-            role: "supporting"
-        })
-
-    ];
+    project.characters = [];
 
 }
 
@@ -247,6 +230,10 @@ class ProjectBuilder {
     goal:
         scene.goal || "",
 
+   decision:
+    scene.decision || "",
+
+
     obstacle:
         scene.obstacle || "",
 
@@ -287,9 +274,6 @@ class ProjectBuilder {
         scene.outcome || "",
 
      // 🧠 SCENE INTELLIGENCE
-
-    decision:
-        scene.decision || "",
 
     change:
         scene.change || "",

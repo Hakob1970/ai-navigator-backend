@@ -17,6 +17,27 @@ const ImprovementApproval =
 const ImprovementHistoryService =
     require("./improvementHistoryService");
 
+const ImprovementApplier =
+    require("./improvementApplier");
+
+const EditorRevisionEngine =
+    require("./editorRevisionEngine");
+
+const RevisionQualityCheck =
+    require("./revisionQualityCheck");
+
+const ImprovementImpactAnalyzer =
+    require("./improvementImpactAnalyzer");
+
+const ReAnalysisEngine =
+    require("./reAnalysisEngine");
+
+const RevisionFeedbackService =
+    require("./revisionFeedbackService");
+
+const AuthorDecisionService =
+    require("./authorDecisionService");
+
 
 
 
@@ -313,6 +334,262 @@ result.stages.push({
     data:
         ImprovementHistoryService
             .getHistory(project)
+
+});
+
+
+          // =====================
+          // APPLICATION
+          // =====================
+
+
+const appliedProject =
+    ImprovementApplier.apply(
+        project,
+        approvedProposals &&
+        approvedProposals.length > 0
+            ? approvedProposals[0]
+            : null
+    );
+
+
+result.stages.push({
+
+    stage:
+        "application",
+
+    status:
+        "completed",
+
+    data:
+        appliedProject
+
+});
+
+
+        // =====================
+       // REVISION
+      // =====================
+
+
+const revisions = [];
+
+
+approvedProposals.forEach(
+    proposal => {
+
+
+        const before =
+            JSON.stringify(project);
+
+
+
+        EditorRevisionEngine.revise(
+            project,
+            proposal
+        );
+
+
+        revisions.push({
+
+            proposalId:
+                proposal.id,
+
+
+            status:
+                "revised"
+
+        });
+
+
+    }
+);
+
+
+
+result.stages.push({
+
+    stage:
+        "revision",
+
+
+    status:
+        "completed",
+
+
+    data:
+        revisions
+
+});
+
+
+           const qualityResults =
+    RevisionQualityCheck.checkAll(
+        project,
+        approvedProposals
+    );
+
+result.stages.push({
+
+    stage:
+        "quality_check",
+
+    status:
+        "completed",
+
+    data:
+        qualityResults
+
+});
+
+
+
+          const reAnalysisResult =
+    ReAnalysisEngine.compare(
+        qualityResults.scoreBefore || 0,
+        qualityResults.scoreAfter || 0
+    );
+
+
+result.stages.push({
+
+    stage: "re_analysis",
+
+    status: "completed",
+
+    data:
+        reAnalysisResult
+
+});
+
+
+          // ===============================
+         // STAGE 11 — IMPACT ANALYSIS
+        // ===============================
+
+const impactResults =
+    ImprovementImpactAnalyzer.compare(
+
+        {
+            quality: {
+                overall:
+                    qualityResults.scoreBefore || 0
+            }
+        },
+
+        {
+            quality: {
+                overall:
+                    qualityResults.scoreAfter || 0
+            }
+        }
+
+    );
+
+
+result.stages.push({
+
+    stage:
+        "impact_analysis",
+
+    status:
+        "completed",
+
+    data:
+        [
+            impactResults
+        ]
+
+});
+
+
+
+         // ===============================
+         // STAGE 12 — REVISION FEEDBACK
+         // ===============================
+
+
+const feedbackResults =
+    approvedProposals.map(
+        (proposal, index)=>{
+
+
+            return RevisionFeedbackService.generate(
+
+                proposal,
+
+                qualityResults[index],
+
+                reAnalysisResult,
+
+                impactResults[index]
+
+            );
+
+
+        }
+    );
+
+
+
+result.stages.push({
+
+    stage:
+        "feedback",
+
+    status:
+        "completed",
+
+    data:
+        feedbackResults
+
+});
+
+
+       // ===============================
+      // STAGE 13 — AUTHOR DECISION
+      // ===============================
+
+const authorDecisions =
+    approvedProposals.map(
+
+        proposal => {
+
+            const decision =
+                AuthorDecisionService.createDecision({
+
+                    proposal,
+
+                    authorChoice:
+                        "approve"
+
+                });
+
+            return {
+
+                decision,
+
+                evaluation:
+                    null
+
+            };
+
+        }
+
+    );
+
+
+
+result.stages.push({
+
+    stage:
+        "author_decision",
+
+    status:
+        "completed",
+
+    data:
+        authorDecisions
 
 });
 

@@ -123,23 +123,40 @@ if (
     improvements.memoryAnalysis.actions.forEach(
         action => {
 
-            tasks.push({
 
-                type:
-                    "memory",
+            if (action.issues) {
 
-                target:
-                    action.type,
 
-                task:
-                    `Improve story memory: ${action.missing}`
+                action.issues.forEach(
+                    issue => {
 
-            });
+
+                        tasks.push({
+
+                            type:
+                                "memory",
+
+                            target:
+                                issue.type,
+
+                            task:
+                                `Improve story memory: ${issue.missing}`
+
+                        });
+
+
+                    }
+                );
+
+
+            }
+
 
         }
     );
 
 }
+
 
 
 
@@ -206,25 +223,38 @@ if (
         action => {
 
 
-            tasks.push({
+            if (action.issues) {
 
-                type:
-                    "story_logic",
 
-                target:
-                    action.type,
+                action.issues.forEach(
+                    issue => {
 
-                task:
-                    `Fix story logic: ${action.missing}`
 
-            });
+                        tasks.push({
+
+                            type:
+                                "story_logic",
+
+                            target:
+                                issue.type,
+
+                            task:
+                                `Fix story logic: ${issue.description}`
+
+                        });
+
+
+                    }
+                );
+
+
+            }
 
 
         }
     );
 
 }
-
 
 
         // =========================

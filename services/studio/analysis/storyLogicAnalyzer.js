@@ -8,12 +8,9 @@
  * подготовку финала.
  */
 
-
 class StoryLogicAnalyzer {
 
-
     static analyze(project) {
-
 
         const result = {
 
@@ -24,24 +21,45 @@ class StoryLogicAnalyzer {
         };
 
 
+        // =========================
+        // 🛡️ PROJECT VALIDATION
+        // =========================
+
+        if (!project) {
+
+            result.issues.push({
+
+                type:
+                    "project_missing",
+
+                description:
+                    "Story project is missing."
+
+            });
+
+            result.observations.push(
+                "Story logic could not be analyzed."
+            );
+
+            return result;
+
+        }
+
 
         // =========================
         // 🎭 CHARACTER MOTIVATION
         // =========================
 
-
         if (
-            project.characters &&
+            Array.isArray(project.characters) &&
             project.characters.length > 0
         ) {
 
-
             project.characters.forEach(character => {
 
-
                 if (
-                    !character.motivation &&
-                    !character.goal
+                    !character.motivation ||
+                    !character.motivation.goal
                 ) {
 
                     result.issues.push({
@@ -49,43 +67,35 @@ class StoryLogicAnalyzer {
                         type:
                             "character_motivation",
 
-
                         character:
                             character.name,
 
-
                         description:
-                            "Character actions lack clear motivation."
+                            "Character has no clear motivation or goal."
 
                     });
 
                 }
 
-
             });
 
-
         }
-
 
 
         // =========================
         // ⚔️ ACTION → CONSEQUENCE
         // =========================
 
-
         if (
-            project.scenes &&
+            Array.isArray(project.scenes) &&
             project.scenes.length > 0
         ) {
 
-
             project.scenes.forEach(scene => {
-
 
                 if (
                     scene.decision &&
-                    !scene.consequence
+                    !scene.outcome
                 ) {
 
                     result.issues.push({
@@ -93,10 +103,8 @@ class StoryLogicAnalyzer {
                         type:
                             "missing_consequence",
 
-
                         scene:
                             scene.title,
-
 
                         description:
                             "Character decision has no visible consequence."
@@ -105,144 +113,136 @@ class StoryLogicAnalyzer {
 
                 }
 
-
-
             });
 
-
         }
-
 
 
         // =========================
         // 🔥 CONFLICT DEVELOPMENT
         // =========================
 
+        const conflicts =
+            project.storyArchitecture?.conflicts || {};
+
+        const internalConflicts =
+            Array.isArray(conflicts.internal)
+                ? conflicts.internal
+                : [];
+
+        const externalConflicts =
+            Array.isArray(conflicts.external)
+                ? conflicts.external
+                : [];
+
 
         if (
-            !project.storyArchitecture ||
-            !project.storyArchitecture.conflicts ||
-            project.storyArchitecture.conflicts.length === 0
+            internalConflicts.length === 0 &&
+            externalConflicts.length === 0
         ) {
-
 
             result.issues.push({
 
                 type:
                     "conflict_structure",
 
-
                 description:
                     "Story conflict development is not defined."
 
             });
 
-
         }
-
 
 
         // =========================
         // 🧵 OPEN THREADS
         // =========================
 
-
         if (
             project.memory &&
-            project.memory.plotThreads
+            Array.isArray(project.memory.plotThreads)
         ) {
 
-
             project.memory.plotThreads.forEach(thread => {
+
+                const events =
+                    Array.isArray(thread.events)
+                        ? thread.events
+                        : [];
 
 
                 if (
                     thread.status === "active" &&
-                    thread.events.length === 0
+                    events.length === 0
                 ) {
-
 
                     result.issues.push({
 
                         type:
                             "unresolved_thread",
 
-
                         thread:
                             thread.title,
-
 
                         description:
                             "Story thread exists without development."
 
                     });
 
-
                 }
-
 
             });
 
-
         }
-
 
 
         // =========================
         // 🏁 ENDING PREPARATION
         // =========================
 
-
         if (
             project.ending &&
             !project.ending.summary
         ) {
-
 
             result.issues.push({
 
                 type:
                     "ending_logic",
 
-
                 description:
                     "Ending has no clear resolution."
 
             });
 
-
         }
 
 
+        // =========================
+        // 📊 OBSERVATION
+        // =========================
 
         if (
             result.issues.length > 0
         ) {
 
-
             result.observations.push(
                 "Story logic requires improvement."
             );
 
-
         }
         else {
-
 
             result.observations.push(
                 "Story logic is consistent."
             );
 
-
         }
-
 
 
         return result;
 
-
     }
-
 
 }
 

@@ -92,16 +92,26 @@ def get_lang(user_id):
     except:
         return "en"
 
-def is_premium(email):
-    print("BOT PREMIUM CHECK:", email)
+
+def is_premium(email, module="ai-navigator"):
+    print("BOT PREMIUM CHECK:", email, module)
+
     try:
         res = requests.get(
             f"{BACKEND}/api/bot/premium",
-            params={"email": email},
+            params={
+                "email": email,
+                "module": module
+            },
             timeout=3
         )
+
+        print("PREMIUM RESPONSE:", res.json())
+
         return res.json().get("premium", False)
-    except:
+
+    except Exception as e:
+        print("PREMIUM CHECK ERROR:", e)
         return False
 
 

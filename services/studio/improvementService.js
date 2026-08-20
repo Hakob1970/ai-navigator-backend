@@ -7,6 +7,11 @@
     require("./characterBuilder");
 
 
+ const CharacterActionAnalyzer =
+    require("./analysis/characterActionAnalyzer");
+
+
+
 class ImprovementService {
 
 
@@ -16,9 +21,14 @@ class ImprovementService {
      */
     static improveProject(project, report) {
 
+console.log(
+    "REPORT KEYS:",
+    Object.keys(report)
+);
+
 
         const recommendations =
-    report.recommendations || [];
+            report.recommendations || [];
 
 
 return {
@@ -45,7 +55,9 @@ characterEvidence:
         this.improveCharacterActions(
             project,
             recommendations.filter(
-               r => r.type === "character_action"
+               r =>
+                   r.type === "character_action" ||
+                   r.type === "character_actions"
         )
     ),
 
@@ -253,6 +265,9 @@ static improveCharacterActions(
 
     };
 
+const actionAnalysis =
+    CharacterActionAnalyzer.analyze(project).characters;
+
 
     if (
         recommendations &&
@@ -269,10 +284,49 @@ static improveCharacterActions(
                 recommendation.characters.forEach(
                     character => {
 
+                         const analyzedCharacter =
+                             actionAnalysis.find(
+                                 item =>
+                                     item.name === character.name
+                             );
+
                         result.actions.push({
 
                             character:
                                 character.name,
+
+                               currentScore:
+        analyzedCharacter?.actionScore || 0,
+
+       severity:
+        (analyzedCharacter?.actionScore || 0) < 30
+            ? "high"
+            : "medium",
+
+
+    priority:
+        (analyzedCharacter?.actionScore || 0) < 30
+            ? 1
+            : 2,
+
+
+    missing: [
+
+        ...(analyzedCharacter?.decisions === 0
+            ? ["decisions"]
+            : []),
+
+        ...(analyzedCharacter?.goals === 0
+            ? ["goals"]
+            : []),
+
+        ...(analyzedCharacter?.outcomes === 0
+            ? ["outcomes"]
+            : [])
+
+    ],
+
+
 
                             suggestions: [
 
@@ -1208,9 +1262,49 @@ static buildImprovementTasks(report) {
 
 
 
-    return tasks;
+    return this.normalizeTasks(tasks);
 
 }
+
+
+                  // =========================
+                  // 🧹 TASK NORMALIZATION
+                 // =========================
+
+    static normalizeTasks(tasks) {
+
+        const map = new Map();
+
+
+        tasks.forEach(task => {
+
+            const key =
+                [
+                    task.type,
+                    task.target || "",
+                    task.character || ""
+                ]
+                .join("|");
+
+
+            if (!map.has(key)) {
+
+                map.set(
+                    key,
+                    task
+                );
+
+            }
+
+        });
+
+
+        return Array.from(
+            map.values()
+        );
+
+    }
+
 
     // =========================
     // 📝 TO PROMPT

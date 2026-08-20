@@ -26,6 +26,12 @@ class MemoryService {
         project.memory.timeline || [];
 
 
+           console.log(
+            "[TIMELINE DEBUG] Memory initialized:",
+            project.memory.timeline
+        );
+
+
     project.memory.conflicts =
         project.memory.conflicts || [];
 
@@ -110,6 +116,16 @@ class MemoryService {
             createdAt:
                 new Date().toISOString()
         });
+
+
+                console.log(
+            "[TIMELINE DEBUG] Event added:",
+            JSON.stringify(
+                project.memory.timeline,
+                null,
+                2
+            )
+        );
 
 
         return project.memory.timeline;

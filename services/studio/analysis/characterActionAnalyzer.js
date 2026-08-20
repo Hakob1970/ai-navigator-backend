@@ -11,6 +11,8 @@ class CharacterActionAnalyzer {
 
             characters: [],
 
+            issues: [],
+
             observations: []
 
         };
@@ -40,21 +42,62 @@ class CharacterActionAnalyzer {
                 );
 
 
+            /*
+             * Scene-level fields such as goal,
+             * decision and outcome are not automatically
+             * attributed to every character in the scene.
+             *
+             * Evidence is counted only when the character
+             * is explicitly referenced by name.
+             */
+
+            const characterName =
+                character.name || "";
+
+
+            const belongsToCharacter =
+                value => {
+
+                    if (
+                        typeof value !== "string" ||
+                        !characterName
+                    ) {
+                        return false;
+                    }
+
+                    return value
+                        .toLowerCase()
+                        .includes(
+                            characterName.toLowerCase()
+                        );
+
+                };
+
+
             const decisions =
                 characterScenes.filter(
-                    scene => scene.decision
+                    scene =>
+                        belongsToCharacter(
+                            scene.decision
+                        )
                 );
 
 
             const goals =
                 characterScenes.filter(
-                    scene => scene.goal
+                    scene =>
+                        belongsToCharacter(
+                            scene.goal
+                        )
                 );
 
 
             const outcomes =
                 characterScenes.filter(
-                    scene => scene.outcome
+                    scene =>
+                        belongsToCharacter(
+                            scene.outcome
+                        )
                 );
 
 
@@ -93,6 +136,36 @@ class CharacterActionAnalyzer {
 
             });
 
+
+            if (
+                actionScore < 30
+            ) {
+
+                result.issues.push({
+
+                    type:
+                        "character_action",
+
+                    character:
+                        character.name,
+
+                    description:
+                        `${character.name} does not sufficiently influence story events.`,
+
+                    suggestions: [
+
+                        "Add meaningful decisions",
+
+                        "Create consequences from character choices",
+
+                        "Show characters pursuing clear goals"
+
+                    ]
+
+                });
+
+            }
+
         });
 
 
@@ -100,10 +173,12 @@ class CharacterActionAnalyzer {
             "Character actions analyzed."
         );
 
+
         return result;
 
     }
 
 }
+
 
 module.exports = CharacterActionAnalyzer;

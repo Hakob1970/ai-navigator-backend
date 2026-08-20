@@ -19,30 +19,70 @@ const ImprovementExecutor =
 
 let project =
     ProjectBuilder.create({
-        title: "The Last Kingdom"
+
+        title: "Test Book",
+
+        characters: [
+
+            {
+                name: "Alex",
+                role: "protagonist"
+            },
+
+            {
+                name: "Victor",
+                role: "antagonist"
+            },
+
+            {
+                name: "Maya",
+                role: "supporting"
+            }
+
+        ]
+
     });
 
 
 project.scenes = [
 
     {
-        id: "scene_1",
+        id: "scene_test_1",
 
         title: "The First Meeting",
 
-        goal: "",
+        goal:
+            "Alex wants to protect his family",
 
-        conflict: "",
+        conflict:
+            "Victor threatens Alex's family",
 
-        obstacle: "",
+        obstacle:
+            "Alex must choose between duty and loyalty",
 
-        characters: [
-            "Edward"
-        ],
+        characters:
+            project.characters.map(
+                character => character.id
+            ),
 
-        dialogue: "",
+        decision:
+            "Alex chooses to betray the council to save his family",
 
-        outcome: ""
+        dialogue: [
+    {
+        character:
+            "Alex",
+
+        text:
+            "I will reveal the truth to protect my family."
+    }
+],
+
+        outcome:
+            "Victor changes his strategy because of Alex's choice",
+
+        emotionalShift:
+            "Alex feels guilt after his decision"
 
     }
 
@@ -67,7 +107,7 @@ project.characters[0].conflict.internal =
 
 project.characters[1].personality.traits = [];
 
-project.characters[1].background =
+project.characters[1].background.history =
     "";
 
 project.characters[1].motivation.goal =
@@ -82,7 +122,7 @@ project.characters[1].conflict.internal =
 project.characters[1].conflict.external =
     "";
 
-project.characters[1].arc =
+project.characters[1].development.arc =
     "";
 
 

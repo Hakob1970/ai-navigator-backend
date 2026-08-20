@@ -5,16 +5,11 @@
 
 class CharacterEvidenceAnalyzer {
 
-
     static analyze(project) {
 
-
         const result = {
-
             characters: [],
-
             observations: []
-
         };
 
 
@@ -28,9 +23,7 @@ class CharacterEvidenceAnalyzer {
             );
 
             return result;
-
         }
-
 
 
         project.characters.forEach(character => {
@@ -44,24 +37,87 @@ class CharacterEvidenceAnalyzer {
                 );
 
 
-
-            const characterActions =
-                characterScenes.filter(
-                    scene =>
-                        scene.goal ||
-                        scene.obstacle ||
-                        scene.outcome
-                );
+           console.log("CHARACTER SCENE DEBUG:", {
+    character: character.name,
+    scenes: characterScenes
+});
 
 
+            /*
+             * IMPORTANT:
+             *
+             * Scene-level fields such as goal,
+             * obstacle and outcome belong to the
+             * scene as a whole.
+             *
+             * They must not automatically be treated
+             * as evidence of every character present
+             * in that scene.
+             *
+             * Character-specific action evidence will
+             * be handled by CharacterActionAnalyzer.
+             */
+
+            const characterActions = [];
+
+
+            /*
+             * Dialogue evidence is counted only when
+             * the dialogue explicitly identifies the
+             * speaking character.
+             *
+             * Support both:
+             *   dialoguePoints
+             * and legacy/test
+             *   dialogue
+             */
 
             const characterDialogues =
-                characterScenes.filter(
-                    scene =>
-                        scene.dialoguePoints &&
-                        scene.dialoguePoints.length > 0
-                );
+                characterScenes.filter(scene => {
 
+                    const dialogue =
+                        Array.isArray(scene.dialoguePoints)
+                            ? scene.dialoguePoints
+                            : Array.isArray(scene.dialogue)
+                                ? scene.dialogue
+                                : [];
+
+                    return dialogue.some(point => {
+
+                        if (!point) {
+                            return false;
+                        }
+
+                        return (
+                            point.character === character.id ||
+                            point.character === character.name
+                        );
+
+                    });
+
+                });
+
+
+            console.log(
+                "CHARACTER EVIDENCE DEBUG:",
+                {
+                    character: character.name,
+                    id: character.id,
+                    sceneCount: characterScenes.length,
+                    actionEvidence:
+                        characterActions.length,
+                    dialogueEvidence:
+                        characterDialogues.length,
+                    presenceScore:
+                        characterScenes.length === 0
+                            ? 0
+                            : characterScenes.length < 3
+                                ? 40
+                                : characterScenes.length < 5
+                                    ? 70
+                                    : 100
+                }
+            );
 
 
             result.characters.push({
@@ -111,7 +167,6 @@ class CharacterEvidenceAnalyzer {
         });
 
 
-
         if (
             result.characters.length > 0
         ) {
@@ -123,13 +178,11 @@ class CharacterEvidenceAnalyzer {
         }
 
 
-
         const invisibleCharacters =
             result.characters.filter(
                 character =>
                     character.sceneCount === 0
             );
-
 
 
         if (
@@ -143,11 +196,9 @@ class CharacterEvidenceAnalyzer {
         }
 
 
-
         return result;
 
     }
-
 
 }
 

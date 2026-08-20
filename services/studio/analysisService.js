@@ -28,8 +28,57 @@ const StoryLogicAnalyzer =
     require("./analysis/storyLogicAnalyzer");
 
 
+const IssueAggregator =
+    require("./analysis/issueAggregator");
+
+
 
 class AnalysisService {
+
+
+                  // =========================
+                 // 🔄 REMOVE DUPLICATE ISSUES
+                // =========================
+
+    static uniqueIssues(issues) {
+
+        const map = new Map();
+
+
+        issues.forEach(issue => {
+
+
+            const key =
+                [
+                    issue.type,
+                    issue.description
+                ]
+                .join("|");
+
+
+
+            if (
+                !map.has(key)
+            ) {
+
+                map.set(
+                    key,
+                    issue
+                );
+
+            }
+
+
+        });
+
+
+        return Array.from(
+            map.values()
+        );
+
+    }
+
+
 
        /**
      * Анализ персонажей
@@ -83,7 +132,7 @@ class AnalysisService {
 
 
 
-        if (result.total > 0) {
+        if (result.missingMotivation.length > 0) {
 
             result.observations.push(
                 "Characters exist, but motivations need development."
@@ -671,8 +720,8 @@ if (
    dialogueAnalysis:
       DialogueAnalyzer.analyze(project),
 
-   conflicts:
-      ConflictAnalyzer.analyze(project),
+   conflictAnalysis:
+       ConflictAnalyzer.analyze(project),
 
    memoryAnalysis:
         MemoryAnalyzer.analyze(project),
@@ -709,6 +758,22 @@ if (
         };
 
 
+    report.aggregatedIssues =
+       IssueAggregator.aggregate(
+           report.analysis
+       );
+
+
+     console.log(
+    "AGGREGATED ISSUES:",
+    JSON.stringify(
+        report.aggregatedIssues,
+        null,
+        2
+    )
+);
+
+
 
         // =========================
         // РЕКОМЕНДАЦИИ
@@ -743,6 +808,9 @@ if (
             )
             .map(
                 c => ({
+
+                      id:
+                        c.id,
 
                     name:
                         c.name,
@@ -888,6 +956,12 @@ if (
 ) {
 
 
+      const uniqueMemoryIssues =
+          this.uniqueIssues(
+              memoryAnalysis.issues
+          );
+
+
     report.recommendations.push({
 
         type:
@@ -898,7 +972,7 @@ if (
 
 
         issues:
-            memoryAnalysis.issues.map(
+            uniqueMemoryIssues.map(
                 issue => ({
 
                     type:
@@ -944,6 +1018,12 @@ if (
 ) {
 
 
+      const uniqueContinuityIssues =
+              this.uniqueIssues(
+                  continuityAnalysis.issues
+              );
+
+
     report.recommendations.push({
 
         type:
@@ -954,7 +1034,7 @@ if (
 
 
         issues:
-            continuityAnalysis.issues.map(
+            uniqueContinuityIssues.map(
                 issue => ({
 
                     type:
@@ -1000,6 +1080,12 @@ if (
 ) {
 
 
+      const uniqueStoryLogicIssues =
+            this.uniqueIssues(
+                storyLogicAnalysis.issues
+            );
+
+
     report.recommendations.push({
 
         type:
@@ -1011,7 +1097,7 @@ if (
 
 
         issues:
-            storyLogicAnalysis.issues.map(
+            uniqueStoryLogicIssues.map(
                 issue => ({
 
                     type:
@@ -1163,6 +1249,77 @@ if (
 
 }
 
+                           // =========================
+                           // 💬 DIALOGUE ANALYSIS
+                           // =========================
+
+const dialogueAnalysis =
+    report.analysis.dialogueAnalysis;
+
+
+if (
+    dialogueAnalysis &&
+    dialogueAnalysis.scenes
+) {
+
+
+    const weakDialogue =
+        dialogueAnalysis.scenes.filter(
+            scene =>
+                scene.quality < 70
+        );
+
+
+    if (
+        weakDialogue.length > 0
+    ) {
+
+
+        report.recommendations.push({
+
+
+            type:
+                "dialogue",
+
+
+            message:
+                "Dialogue structure requires improvement.",
+
+
+            scenes:
+                weakDialogue.map(
+                    scene => ({
+
+
+                        id:
+                            scene.id,
+
+
+                        title:
+                            scene.title,
+
+
+                        missing:
+                            scene.missing,
+
+
+                        quality:
+                            scene.quality
+
+
+                    })
+                )
+
+
+        });
+
+
+    }
+
+
+}
+
+
 
         return report;
 
@@ -1195,7 +1352,7 @@ if (
    dialogueAnalysis:
        DialogueAnalyzer.analyze(project),
 
-   conflicts:
+   conflictAnalysis:
        ConflictAnalyzer.analyze(project),
 
    memoryAnalysis:
@@ -1278,12 +1435,11 @@ if (
                 !character.background ||
                 !character.background.history
             ) {
-
                 missing.push(
                     "background history"
-                );
-
+               );
             }
+
 
 
 
@@ -1342,20 +1498,21 @@ if (
             if (
                 !character.development ||
                 !character.development.arc
-            ) {
-
+           ) {
                 missing.push(
                     "character arc"
-                );
-
-            }
+               );
+           }
 
 
 
             result.characters.push({
 
-                name:
-                    character.name,
+                   id:
+                       character.id,
+
+                 name:
+                       character.name,
 
                 role:
                     character.role,

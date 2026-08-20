@@ -31,6 +31,30 @@ class ContinuityAnalyzer {
 
 
 
+                console.log(
+            "========== TIMELINE DEBUG =========="
+        );
+
+        console.log(
+            "project.memory:",
+            JSON.stringify(project.memory, null, 2)
+        );
+
+        console.log(
+            "project.memory.timeline:",
+            JSON.stringify(
+                project.memory?.timeline,
+                null,
+                2
+            )
+        );
+
+        console.log(
+            "===================================="
+        );
+
+
+
         // =========================
         // 👤 CHARACTER CONTINUITY
         // =========================
@@ -46,8 +70,8 @@ class ContinuityAnalyzer {
 
 
                 if (
-                    !character.motivation &&
-                    !character.goal
+                    !character.motivation ||
+                    !character.motivation.goal
                 ) {
 
                     result.issues.push({
@@ -68,8 +92,8 @@ class ContinuityAnalyzer {
 
 
                 if (
-                    !character.development &&
-                    !character.arc
+                    !character.development ||
+                    !character.development.arc
                 ) {
 
                     result.issues.push({
@@ -264,7 +288,6 @@ class ContinuityAnalyzer {
             );
 
         }
-
 
 
         return result;

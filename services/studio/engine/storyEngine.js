@@ -36,7 +36,7 @@ const analysis =
 const improvements =
     ImprovementService.improveProject(
         project,
-        analysis.analysis
+        analysis
     );
 
 const tasks =
