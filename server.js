@@ -635,35 +635,59 @@ if (!premium) {
 
 app.get("/api/bot/premium", async (req, res) => {
   try {
+
     const email = String(req.query.email || "")
       .trim()
       .toLowerCase();
 
+    const module = String(req.query.module || "ai-navigator")
+      .trim()
+      .toLowerCase();
+
+
     if (!email) {
-      return res.json({ premium: false });
+      return res.json({
+        premium:false
+      });
     }
 
+
     const result = await pool.query(
-      `SELECT premium_until FROM subscriptions WHERE user_id=$1`,
-      [email]
+      `
+      SELECT premium_until
+      FROM subscriptions
+      WHERE user_id=$1
+      AND module=$2
+      AND status='active'
+      LIMIT 1
+      `,
+      [
+        email,
+        module
+      ]
     );
+
 
     const row = result.rows[0];
 
-    if (!row?.premium_until) {
-      return res.json({ premium: false });
-    }
 
     return res.json({
-      premium: Number(row.premium_until) > Date.now()
+      premium:
+        !!row &&
+        Number(row.premium_until) > Date.now(),
+
+      module
     });
 
-  } catch (err) {
+
+  } catch(err){
+
     console.error("BOT PREMIUM ERROR:", err);
 
     return res.json({
-      premium: false
+      premium:false
     });
+
   }
 });
 // =========================

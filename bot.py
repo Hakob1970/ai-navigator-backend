@@ -1,20 +1,86 @@
+import os
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("httpcore").setLevel(logging.ERROR)
+logging.getLogger("telegram").setLevel(logging.ERROR)
+logging.getLogger("telegram.ext").setLevel(logging.ERROR)
+
+logger = logging.getLogger(__name__)
+
+
 import requests
 import asyncio
 import feedparser
 import time
 
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    CallbackQueryHandler,
+    filters
+)
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-import os
+print("=== START OF FILE ===", flush=True)
 
+print("🛡 SECURITY TEST VERSION", flush=True)
 print("BOT STARTING...")
+print("🔥 DEBUG VERSION 777")
+print("PID:", os.getpid(), flush=True)
 
 TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = os.getenv("SUPPORT_ADMIN_ID")
 
 BACKEND = "https://ai-navigator-backend-mcb3.onrender.com"
+
+
+SUPPORT_MODE = set()
+ADMIN_REPLY_MODE = {}
+
+def check_webhook():
+
+    try:
+
+        res = requests.get(
+            f"https://api.telegram.org/bot{TOKEN}/getWebhookInfo",
+            timeout=10
+        )
+
+        data = res.json()
+
+        url = data.get(
+            "result",
+            {}
+        ).get(
+            "url",
+            ""
+        )
+
+        if url:
+
+            print("🚨 SECURITY ALERT")
+            print("WEBHOOK DETECTED:", url)
+
+        else:
+
+            print("🛡 WEBHOOK CHECK PASSED")
+
+    except Exception as e:
+
+        print(
+            "⚠️ WEBHOOK CHECK FAILED:",
+            e
+        )
 
 
 def link_telegram(email, telegram_id):
@@ -122,7 +188,8 @@ def is_premium(email, module="ai-navigator"):
 def menu(lang):
     return ReplyKeyboardMarkup([
         ["📰 AI News"],
-        ["💬 Discussion Club"]
+        ["💬 Discussion Club"],
+        ["🛠 Support"]
     ], resize_keyboard=True,
        is_persistent=True)
 
@@ -142,6 +209,12 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
+
+    logger.info(
+        f"START COMMAND | user_id={user_id}"
+
+    )
+    
     username = update.effective_user.username or "user"
 
     register_user(user_id, username)
@@ -185,11 +258,36 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
-    print("🔥 HANDLE ENTERED")
-    print("CLICKED TEXT:", text)
-    print("TEXT RECEIVED:", repr(text))
+    # =========================
+    # ADMIN REPLY MODE
+    # =========================
+
+    if user_id == int(ADMIN_ID) and user_id in ADMIN_REPLY_MODE:
+
+        target_user = ADMIN_REPLY_MODE[user_id]
+
+        await context.bot.send_message(
+            chat_id=int(target_user),
+            text=(
+                "🛠 Support reply:\n\n"
+                f"{text}"
+            )
+        )
+
+        del ADMIN_REPLY_MODE[user_id]
+
+        await update.message.reply_text(
+            "✅ Reply sent"
+        )
+
+        return
+
+    logger.info("🔥 HANDLE ENTERED")
+    logger.info(f"CLICKED TEXT: {text}")
+    logger.info(f"TEXT RECEIVED: {repr(text)}")
 
     register_user(user_id, username)
+    
 
     # =========================
     # NEWS
@@ -217,6 +315,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             email = res.json().get("email")
 
+            logger.debug("Telegram user checked")
+
             if not email:
                 await update.message.reply_text(
                     "🔒 Discussion Club is for Premium users only\n\n"
@@ -234,6 +334,8 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             data = res.json()
             premium = bool(data.get("premium"))
+
+            logger.debug("Premium status checked")
 
             # 3. доступ
             if premium:
@@ -257,8 +359,63 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "⚠️ Server error. Try again later."
             )
+            return
+
+        # =========================
+        # SUPPORT
+        # =========================
+    if text == "🛠 Support":
+        
+        SUPPORT_MODE.add(user_id)
+
+        print("SUPPORT MODE ADD:", SUPPORT_MODE)
+        
+        await update.message.reply_text(
+            "🛠 Support\n\n"
+            "Please describe your problem.\n"
+            "Your message will be sent to support."
+        )
 
         return
+
+    print("SUPPORT CHECK:", user_id, SUPPORT_MODE)
+    # =========================
+    # SUPPORT MESSAGE
+    # =========================
+    if user_id in SUPPORT_MODE:
+         print("SUPPORT MODE ACTIVE:", user_id)
+
+         SUPPORT_MODE.remove(user_id)
+
+         keyboard = InlineKeyboardMarkup([
+             [
+                 InlineKeyboardButton(
+                     "✉️ Reply",
+                     callback_data=f"reply:{user_id}"
+                 )
+             ]
+         ])
+
+         print("KEYBOARD CREATED")
+
+         await context.bot.send_message(
+             chat_id=int(ADMIN_ID),
+             text=(
+                 "🛠 NEW SUPPORT MESSAGE\n\n"
+                 f"👤 User ID: {user_id}\n"
+                 f"📛 Username: @{username}\n\n"
+                 f"💬 Message:\n{text}"
+             ),
+             reply_markup=keyboard
+         )
+
+         print("MESSAGE WITH BUTTON SENT")
+
+         await update.message.reply_text(
+             "✅ Your message was sent to support."
+         )
+
+         return
     
             
     # =========================
@@ -267,17 +424,104 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Use the menu 👇")
 
 # =========================
+# ADMIN REPLY
+# =========================
+async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    user_id = update.effective_user.id
+
+    if user_id != int(ADMIN_ID):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Usage:\n/reply USER_ID message"
+        )
+        return
+
+    target_user = context.args[0]
+    message = " ".join(context.args[1:])
+
+    try:
+        await context.bot.send_message(
+            chat_id=int(target_user),
+            text=(
+                "🛠 Support reply:\n\n"
+                f"{message}"
+            )
+        )
+
+        await update.message.reply_text(
+        "✅ Reply sent"
+        )
+
+    except Exception as e:
+        await update.message.reply_text(
+            f"❌ Error: {e}"
+        )
+
+
+# =========================
+# ADMIN REPLY BUTTON
+# =========================
+async def reply_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    admin_id = query.from_user.id
+
+    if admin_id != int(ADMIN_ID):
+        return
+
+    user_id = query.data.split(":")[1]
+
+    ADMIN_REPLY_MODE[admin_id] = user_id
+
+    await query.message.reply_text(
+        "✍️ Write your reply message:"
+    )
+
+
+
+async def error_handler(update, context):
+    logger.error(
+        f"ERROR: {context.error}"
+    )
+
+# =========================
 # MAIN 
 # =========================
 def main():
+
+    print("🚀 BOT INSTANCE STARTED", flush=True)
+
+    
+    check_webhook()
     app = Application.builder().token(TOKEN).build()
+
+    app.add_error_handler(error_handler)
 
     app.add_handler(CommandHandler("menu", show_menu))
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reply", admin_reply))
+    app.add_handler(
+        CallbackQueryHandler(
+            reply_callback,
+            pattern="^reply:"
+        )
+    )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-    print("🤖 Bot running clean version...")
-    app.run_polling()
+    print("=== BEFORE POLLING ===", flush=True)
+    print("🤖 Bot running clean version...", flush=True)
+    print("PID:", os.getpid(), flush=True)
+    
+    app.run_polling(
+    drop_pending_updates=True,
+    close_loop=False
+)
 
 
 if __name__ == "__main__":
