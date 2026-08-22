@@ -691,7 +691,7 @@ app.get("/api/bot/premium", async (req, res) => {
   }
 });
 // =========================
-// STRIPE CHECKOUT
+// POLAR CHECKOUT
 // =========================
 app.post("/api/polar/create-checkout", async (req, res) => {
   console.log("🔥 SERVER.JS CREATE-CHECKOUT (PROXY)");
