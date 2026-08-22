@@ -91,24 +91,6 @@ exports.generateBook = async (req, res) => {
         }
 
 
-        // =========================
-        // 📚 OLD FANTASY MODE (НЕ ТРОГАЕМ)
-        // =========================
-        if (mode === "fantasy") {
-
-            // тут остаётся твоя текущая логика
-            // НЕ меняем её вообще
-
-            const result = await generateFantasyBook(input);
-
-            return res.json({
-                success: true,
-                mode: "fantasy",
-                result
-            });
-        }
-
-
         return res.status(400).json({
             success: false,
             message: "Unknown mode"
