@@ -31,6 +31,9 @@ const StoryLogicAnalyzer =
 const IssueAggregator =
     require("./analysis/issueAggregator");
 
+const crypto =
+    require("crypto");
+
 
 
 class AnalysisService {
@@ -50,10 +53,26 @@ class AnalysisService {
 
             const key =
                 [
-                    issue.type,
-                    issue.description
+                    issue.type || "",
+                    issue.target || "",
+                    issue.character || "",
+                    issue.scene || "",
+                    issue.thread || "",
+                    issue.description || ""
                 ]
                 .join("|");
+
+
+                 const issueId =
+                            issue.issueId ||
+               (
+                "issue_" +
+                crypto
+                    .createHash("sha1")
+                    .update(key)
+                    .digest("hex")
+                    .slice(0, 12)
+                  );
 
 
 
@@ -61,15 +80,20 @@ class AnalysisService {
                 !map.has(key)
             ) {
 
-                map.set(
-                    key,
-                    issue
-                );
+                 map.set(
+                      key,
+                     {
 
-            }
+                    ...issue,
 
+                    issueId
 
-        });
+                }
+            );
+
+        }
+
+    });
 
 
         return Array.from(
@@ -975,6 +999,9 @@ if (
             uniqueMemoryIssues.map(
                 issue => ({
 
+                    issueId:
+                         issue.issueId,
+
                     type:
                         issue.type,
 
@@ -1036,6 +1063,9 @@ if (
         issues:
             uniqueContinuityIssues.map(
                 issue => ({
+
+                    issueId:
+                        issue.issueId,
 
                     type:
                         issue.type,
@@ -1099,6 +1129,9 @@ if (
         issues:
             uniqueStoryLogicIssues.map(
                 issue => ({
+
+                    issueId:
+                        issue.issueId,
 
                     type:
                         issue.type,

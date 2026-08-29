@@ -7,6 +7,14 @@
 const TaskPriorityEngine =
 require("./taskPriorityEngine");
 
+const createTaskId = () =>
+    "task_" +
+    Date.now() +
+    "_" +
+    Math.floor(
+        Math.random() * 1000
+    );
+
 
 class ImprovementPlanner {
 
@@ -39,14 +47,20 @@ class ImprovementPlanner {
 
                                 tasks.push({
 
-                                    type:
-                                        "character",
+                                        taskId:
+                                            createTaskId(),
 
-                                    character:
-                                        action.character,
+                                        issueId:
+                                             action.issueId,
 
-                                    target:
-                                        missing,
+                                        type:
+                                           "character",
+
+                                        character:
+                                            action.character,
+
+                                        target:
+                                            missing,
 
                                     task:
                                         `Improve ${missing} for ${action.character}`
@@ -83,6 +97,12 @@ class ImprovementPlanner {
                             missing => {
 
                                 tasks.push({
+
+                                     taskId:
+                                         createTaskId(),
+
+                                     issueId:
+                                         scene.issueId,
 
                                     type:
                                         "scene",
@@ -132,6 +152,12 @@ if (
 
 
                         tasks.push({
+
+                             taskId:
+                                 createTaskId(),
+
+                            issueId:
+                                issue.issueId,
 
                             type:
                                 "memory",
@@ -184,6 +210,12 @@ if (
 
                         tasks.push({
 
+                             taskId:
+                                 createTaskId(),
+
+                            issueId:
+                                issue.issueId,
+
                             type:
                                 "continuity",
 
@@ -232,6 +264,12 @@ if (
 
                         tasks.push({
 
+                            taskId:
+                                createTaskId(),
+
+                            issueId:
+                               issue.issueId,
+
                             type:
                                 "story_logic",
 
@@ -271,6 +309,12 @@ if (
 
             tasks.push({
 
+                 taskId:
+                      createTaskId(),
+
+                issueId:
+                      action.issueId,
+
                 type:
                     "character_evidence",
 
@@ -302,6 +346,12 @@ if (
         action => {
 
             tasks.push({
+
+                 taskId:
+                     createTaskId(),
+
+                issueId:
+                     action.issueId,
 
                 type:
                     "character_action",

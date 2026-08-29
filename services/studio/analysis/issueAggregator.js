@@ -6,6 +6,9 @@
  * и готовит единый формат для Editor Loop.
  */
 
+const crypto = require("crypto");
+
+
 class IssueAggregator {
 
 
@@ -59,6 +62,12 @@ class IssueAggregator {
 
                     character:
                         issue.character,
+
+                      scene:
+                          issue.scene,
+
+                      thread:
+                          issue.thread,
 
 
                     description:
@@ -437,10 +446,23 @@ if (
 
             const key =
                 [
-                    issue.target,
-                    issue.character || ""
+                    issue.module || "",
+                    issue.type || "",
+                    issue.target || "",
+                    issue.character || "",
+                    issue.scene || "",
+                    issue.thread || "",
+                    issue.description || ""
                 ]
                 .join("|");
+
+             const issueId =
+            "issue_" +
+            crypto
+                .createHash("sha1")
+                .update(key)
+                .digest("hex")
+                .slice(0, 12);
 
 
 
@@ -452,6 +474,8 @@ if (
                     {
 
                         ...issue,
+
+                         issueId,
 
                         sources:
                             [

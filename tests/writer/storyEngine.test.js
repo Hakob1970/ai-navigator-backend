@@ -39,9 +39,14 @@ async function run() {
     );
 
 
-    console.log(
-        "\nANALYSIS:",
-        !!project.generation.analysis
+   console.log(
+    "\nPRE-ANALYSIS:",
+    !!project.generation.preAnalysis
+    );
+
+   console.log(
+    "\nPOST-ANALYSIS:",
+    !!project.generation.postAnalysis
     );
 
 
@@ -69,13 +74,59 @@ async function run() {
     // =========================
 
 
-    if (!project.generation.analysis) {
+     if (!project.generation.preAnalysis) {
 
         throw new Error(
-            "Missing analysis"
+             "Missing pre-analysis"
         );
 
     }
+
+     if (!project.generation.postAnalysis) {
+
+        throw new Error(
+             "Missing post-analysis"
+        );
+
+     }
+
+    const preIssues =
+    project.generation.preAnalysis
+        .aggregatedIssues?.issues || [];
+
+const postIssues =
+    project.generation.postAnalysis
+        .aggregatedIssues?.issues || [];
+
+console.log(
+    "\nPRE-ANALYSIS ISSUES:",
+    preIssues.length
+);
+
+console.log(
+    "POST-ANALYSIS ISSUES:",
+    postIssues.length
+);
+
+if (postIssues.length >= preIssues.length) {
+
+    throw new Error(
+        "Post-analysis did not reduce detected issues"
+    );
+
+}
+
+
+     if (
+        !project.memory.timeline ||
+        project.memory.timeline.length === 0
+        ) {
+
+        throw new Error(
+             "Post-analysis did not run after timeline update"
+        );
+
+     }
 
 
 

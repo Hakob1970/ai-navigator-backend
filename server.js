@@ -390,7 +390,8 @@ app.use(cors({
   origin: [
     "https://ai-writer-studio-phi.vercel.app",
     "https://ai-navigator-frontend.vercel.app",
-    "http://localhost:5500"
+    "http://localhost:5500",
+    "http://192.168.11.132:8080"
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true

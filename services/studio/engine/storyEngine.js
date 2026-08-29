@@ -29,14 +29,14 @@ class StoryEngine {
 // 🧠 ANALYSIS & IMPROVEMENT
 // =========================
 
-const analysis =
+const preAnalysis =
     AnalysisService.generateReport(project);
 
 
 const improvements =
     ImprovementService.improveProject(
         project,
-        analysis
+        preAnalysis
     );
 
 const tasks =
@@ -45,8 +45,8 @@ const tasks =
         improvements
     );
 
-project.generation.analysis =
-    analysis;
+project.generation.preAnalysis =
+    preAnalysis;
 
 project.generation.improvements =
     improvements;
@@ -127,7 +127,21 @@ No OpenRouter request.
     MemoryService.addTimelineEvent(
     project,
     "Chapter 1 generated"
-); 
+);
+
+
+       // =========================
+// 🔍 POST-ANALYSIS
+// =========================
+
+project.generation.currentStep =
+    "post-analysis";
+
+const postAnalysis =
+    AnalysisService.generateReport(project);
+
+project.generation.postAnalysis =
+    postAnalysis;
 
 
         project.generation.status =
@@ -136,6 +150,33 @@ No OpenRouter request.
 
         project.generation.currentStep =
             null;
+
+
+       console.log(
+    "===== WRITER STUDIO FRONTEND DATA ====="
+);
+
+console.log(
+    "TASKS:",
+    JSON.stringify(
+        project.generation.tasks,
+        null,
+        2
+    )
+);
+
+console.log(
+    "IMPROVEMENTS:",
+    JSON.stringify(
+        project.generation.improvements,
+        null,
+        2
+    )
+);
+
+console.log(
+    "========================================"
+);
 
 
         return project;

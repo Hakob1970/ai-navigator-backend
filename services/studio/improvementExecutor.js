@@ -303,6 +303,13 @@ else if (
                 Math.random() * 1000
             ),
 
+
+            taskId:
+                task.taskId,
+
+           issueId:
+                task.issueId,
+
                     ...proposal,
 
                     priority:
