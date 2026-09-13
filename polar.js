@@ -64,7 +64,8 @@ router.post("/create-checkout", async (req, res) => {
   {
     headers: {
       Authorization: `Bearer ${process.env.POLAR_ACCESS_TOKEN}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Polar-Version": "2026-04",
     }
   }
 );
