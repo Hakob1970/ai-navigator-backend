@@ -1,5 +1,7 @@
 const BookProject = require("./types");
 const { ENGINE_MODES } = require("./constants");
+const STORY_TEMPLATES =
+    require("./storyTemplates");
 
 /**
  * 🏗️ ProjectBuilder
@@ -93,15 +95,111 @@ class ProjectBuilder {
 
         // =========================
         // 🧩 STORY ARCHITECTURE
-       // =========================
-        project.storyArchitecture.theme =
-            input.theme ||
-            `Exploring human conflicts in ${project.settings.genre} world`;
+        // =========================
+
+const customStory =
+    typeof input.customStory === "string"
+        ? input.customStory.trim()
+        : "";
+
+const selectedTemplate =
+    input.storyTemplate &&
+    STORY_TEMPLATES[input.storyTemplate]
+        ? STORY_TEMPLATES[input.storyTemplate]
+        : null;
 
 
-        project.storyArchitecture.premise =
-            input.premise ||
-           `${project.settings.genre} story set in ${project.world.name}`;
+// CUSTOM STORY HAS PRIORITY
+if (customStory) {
+
+    project.storyArchitecture.storyType =
+        "custom";
+
+    project.storyArchitecture.storyTemplate =
+        "";
+
+    project.storyArchitecture.customStory =
+        customStory;
+
+}
+
+
+// TEMPLATE
+else if (selectedTemplate) {
+
+    project.storyArchitecture.storyType =
+        "template";
+
+    project.storyArchitecture.storyTemplate =
+        selectedTemplate.id;
+
+    project.storyArchitecture.customStory =
+        "";
+
+}
+
+
+// DEFAULT
+else {
+
+    project.storyArchitecture.storyType =
+        "template";
+
+    project.storyArchitecture.storyTemplate =
+        "";
+
+    project.storyArchitecture.customStory =
+        "";
+
+}
+
+
+project.storyArchitecture.theme =
+    input.theme ||
+    `Exploring human conflicts in ${project.settings.genre} world`;
+
+
+project.storyArchitecture.premise =
+    input.premise ||
+    (
+        customStory ||
+        selectedTemplate?.description ||
+        `${project.settings.genre} story set in ${project.world.name}`
+    );
+
+
+                  // =========================
+                  // 🧩 TEMPLATE → ACTS
+                 // =========================
+
+          if (selectedTemplate && !customStory) {
+
+              project.storyArchitecture.acts = {
+
+                  act1: {
+                      title:
+                          selectedTemplate.acts?.act1?.title || "",
+                      summary:
+                          selectedTemplate.acts?.act1?.summary || ""
+                  },
+
+                  act2: {
+                      title:
+                          selectedTemplate.acts?.act2?.title || "",
+                      summary:
+                          selectedTemplate.acts?.act2?.summary || ""
+                  },
+
+                  act3: {
+                      title:
+                          selectedTemplate.acts?.act3?.title || "",
+                      summary:
+                          selectedTemplate.acts?.act3?.summary || ""
+                  }
+
+              };
+
+          }
 
 
 
@@ -112,24 +210,31 @@ class ProjectBuilder {
             project.storyArchitecture.premise;
 
 
-        project.outline.acts = [
+                  project.outline.acts = [
+              {
+                  title:
+                      project.storyArchitecture.acts.act1.title,
 
-            {
-                title: "Beginning",
-                summary: "Introduction of the world, characters and initial conflict."
-            },
+                  summary:
+                      project.storyArchitecture.acts.act1.summary
+              },
 
-            {
-                title: "Conflict",
-                summary: "The main conflict develops and challenges the characters."
-            },
+              {
+                  title:
+                      project.storyArchitecture.acts.act2.title,
 
-            {
-                title: "Resolution",
-                summary: "The story reaches its conclusion and reveals the outcome."
-            }
+                  summary:
+                      project.storyArchitecture.acts.act2.summary
+              },
 
-        ];
+              {
+                  title:
+                      project.storyArchitecture.acts.act3.title,
+
+                  summary:
+                      project.storyArchitecture.acts.act3.summary
+              }
+          ];
 
 
          // =========================

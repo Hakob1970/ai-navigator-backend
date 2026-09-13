@@ -713,6 +713,18 @@ const report =
     AnalysisService.generateReport(project);
 
 console.log(
+    "\n========== DIALOGUE ANALYSIS =========="
+);
+
+console.log(
+    JSON.stringify(
+        report.analysis.dialogueAnalysis,
+        null,
+        2
+    )
+);
+
+console.log(
     "\n========== QUALITY =========="
 );
 

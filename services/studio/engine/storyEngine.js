@@ -23,6 +23,16 @@ class StoryEngine {
         const project =
             ProjectBuilder.create(input);
 
+        console.log("\n===== STORY ENGINE TRACE =====");
+        console.log("INPUT:");
+        console.log(JSON.stringify(input, null, 2));
+
+        console.log("PROJECT CHARACTERS:");
+        console.log(JSON.stringify(project.characters, null, 2));
+
+        console.log("PROJECT SCENES:");
+        console.log(JSON.stringify(project.scenes, null, 2));
+
         MemoryService.initialize(project);
 
 // =========================
@@ -96,6 +106,9 @@ No OpenRouter request.
 `;
 
 } else {
+
+    console.log("PROMPT BEFORE OPENROUTER:");
+    console.log(project.generation.lastPrompt);
 
     result = await OpenRouter.generate({
         prompt,

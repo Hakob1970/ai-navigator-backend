@@ -9,29 +9,39 @@ class ManuscriptParser {
         const results =
             chapters.map(
 
-                (chapter, index) => ({
+                (chapter, index) => {
 
-                    chapterId:
-                        chapter.id ||
-                        chapter.number ||
-                        index + 1,
-
-
-                    title:
-                        chapter.title || "",
+                    const text =
+                        chapter.text ||
+                        chapter.content ||
+                        "";
 
 
-                    text:
-                        chapter.text || "",
+                    return {
+
+                        chapterId:
+                            chapter.id ||
+                            chapter.number ||
+                            chapter.index ||
+                            index + 1,
 
 
-                    wordCount:
-                        (chapter.text || "")
-                            .split(/\s+/)
-                            .filter(Boolean)
-                            .length
+                        title:
+                            chapter.title || "",
 
-                })
+
+                        text,
+
+
+                        wordCount:
+                            text
+                                .split(/\s+/)
+                                .filter(Boolean)
+                                .length
+
+                    };
+
+                }
 
             );
 

@@ -2,6 +2,8 @@ const validation = require("../services/studio/validationService");
 const promptBuilder = require("../services/studio/promptBuilder");
 const openrouter = require("../services/studio/ai/openrouter");
 const StoryEngine = require("../services/studio/engine/storyEngine");
+const ManuscriptAnalyzer =
+    require("../services/studio/manuscriptAnalyzer/manuscriptAnalyzer");
 
 
 // =========================
@@ -100,6 +102,48 @@ exports.generateBook = async (req, res) => {
         console.error(err);
 
         res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+};
+
+
+       // =========================
+      // MANUSCRIPT ANALYSIS
+      // =========================
+
+exports.analyzeManuscript = async (req, res) => {
+    try {
+
+        const manuscript = req.body;
+
+
+         console.log(
+            "===== MANUSCRIPT RECEIVED BY BACKEND ====="
+        );
+
+        console.log(
+            JSON.stringify(manuscript, null, 2)
+        );
+
+
+        const report =
+            ManuscriptAnalyzer.analyze(manuscript);
+
+        return res.json({
+            success: true,
+            report
+        });
+
+    } catch (err) {
+
+        console.error(
+            "MANUSCRIPT_ANALYZER_ERROR:",
+            err
+        );
+
+        return res.status(500).json({
             success: false,
             error: err.message
         });

@@ -14,5 +14,7 @@ router.post("/generate", writerController.generate);
 // =========================
 router.post("/generateBook", writerController.generateBook);
 
+router.post("/analyzeManuscript", writerController.analyzeManuscript);
+
 
 module.exports = router;

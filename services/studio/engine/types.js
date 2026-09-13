@@ -123,6 +123,12 @@ const BookProject = {
 
     storyArchitecture: {
 
+
+        storyType: "template",
+        storyTemplate: "",
+        customStory: "",
+
+
         theme: "",
         premise: "",
 

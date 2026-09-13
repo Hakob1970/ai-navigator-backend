@@ -36,6 +36,10 @@ const CharacterDevelopmentAnalyzer =
 const CharacterExtractionAnalyzer =
     require("./characterExtractionAnalyzer");
 
+const CharacterDetectionAnalyzer =
+    require("./characterDetectionAnalyzer");
+
+
 const CharacterJourneyAnalyzer =
     require("./characterJourneyAnalyzer");
 
@@ -167,17 +171,29 @@ class ManuscriptAnalyzer {
                 chapterAnalyses
             );
 
-       const characterArc =
-    CharacterArcAnalyzer.analyze(
-        parsed.chapters || [],
-        manuscript.characters || manuscript.project?.characters || []
-    );
+        const knownCharacters =
+           manuscript.characters ||
+           manuscript.project?.characters ||
+           [];
+
+        const detectedCharacters =
+            knownCharacters.length > 0
+            ? knownCharacters
+            : CharacterDetectionAnalyzer
+                .analyze(parsed.chapters || [])
+                .characters;
+
+        const characterArc =
+           CharacterArcAnalyzer.analyze(
+              parsed.chapters || [],
+               detectedCharacters
+           );
 
       const characterDevelopment =
-    CharacterDevelopmentAnalyzer.analyze(
-        manuscript.chapters || [],
-        manuscript.characters || []
-    );
+          CharacterDevelopmentAnalyzer.analyze(
+              parsed.chapters || [],
+              detectedCharacters
+          );
 
 
        const conflictArc =
@@ -191,12 +207,12 @@ class ManuscriptAnalyzer {
         chapterAnalyses
     );
 
-      const characterExtraction =
-     CharacterExtractionAnalyzer.analyze(
-    parsed.chapters || [],
-    manuscript.characters ||
-    manuscript.project?.characters || []
-    );
+
+       const characterExtraction =
+           CharacterExtractionAnalyzer.analyze(
+                parsed.chapters || [],
+                  detectedCharacters
+       );
 
      const characterJourney =
     CharacterJourneyAnalyzer.analyze(

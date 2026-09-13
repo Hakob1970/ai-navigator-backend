@@ -27,8 +27,14 @@ class InternalConflictAnalyzer {
             const observations = [];
             const problems = [];
 
-            const textData =
-                JSON.stringify(character).toLowerCase();
+            const textData = [
+                ...(character.fears || []),
+                ...(character.goals || []),
+                ...(character.needs || []),
+                ...(character.sacrifices || [])
+            ]
+                .join(" ")
+                .toLowerCase();
 
             const transformationCharacter =
                 transformationCharacters.find(

@@ -439,32 +439,35 @@ const characterIsActive =
         }
 
 
+
         /*
-         * Character appears as
-         * grammatical subject before
-         * a relevant verb.
+         * Direct subject check.
          *
-         * Examples:
+         * The character must be immediately
+         * followed by a word that can function
+         * as a verb.
          *
-         * Alex chose Maya.
-         * Alex decided to leave.
-         * Victor accepted the offer.
+         * We do NOT allow several arbitrary
+         * words between the character name
+         * and the possible action.
          */
 
-        const activePattern =
+        const subjectPattern =
             new RegExp(
-                `\\b${escapedName}\\b\\s+(?:had\\s+|has\\s+|have\\s+|was\\s+|is\\s+|were\\s+|are\\s+)?(?:\\w+\\s+){0,4}\\w+`,
+                `\\b${escapedName}\\b\\s+(?!through\\b|into\\b|onto\\b|from\\b|to\\b|with\\b|for\\b|against\\b|at\\b|by\\b|near\\b|behind\\b|before\\b|after\\b|under\\b|over\\b|between\\b|among\\b|beside\\b|inside\\b|outside\\b|toward\\b|towards\\b|the\\b|a\\b|an\\b|this\\b|that\\b|these\\b|those\\b|him\\b|her\\b|them\\b|his\\b|her\\b|their\\b)\\w+`,
                 "i"
             );
 
 
         if (
-            activePattern.test(sentence)
+            subjectPattern.test(sentence)
         ) {
 
             return true;
 
         }
+
+
 
 
         /*
