@@ -1,6 +1,9 @@
 const ManuscriptParser =
     require("./manuscriptParser");
 
+const EntityLabBridge =
+    require("../entityLabBridge");
+
 
 const ChapterAnalyzer =
     require("./chapterAnalyzer");
@@ -83,7 +86,7 @@ class ManuscriptAnalyzer {
 
 
 
-    static analyze(manuscript) {
+    static async analyze(manuscript) {
 
 
 
@@ -159,6 +162,44 @@ class ManuscriptAnalyzer {
 
             );
 
+
+
+        // =========================
+        // Entity Lab analysis
+        // =========================
+
+        const entityAnalysis = [];
+
+        for (const chapter of parsed.chapters) {
+
+            const result =
+                await EntityLabBridge.analyzeText(
+                    chapter.text || ""
+                );
+
+            entityAnalysis.push({
+
+                chapterId:
+                    chapter.chapterId,
+
+                title:
+                    chapter.title,
+
+                resolution:
+                    result.resolution,
+
+                evidence_records:
+                    result.evidence_records,
+
+                ai_escalation_candidates:
+                    result.ai_escalation_candidates,
+
+                ai_escalation_skipped:
+                    result.ai_escalation_skipped
+
+            });
+
+        }
 
 
         // =========================
@@ -345,6 +386,9 @@ const characterArcCoherence =
 
             chapters:
                 chapterAnalyses,
+
+            entityAnalysis,
+
 
 
             comparison,

@@ -129,7 +129,7 @@ exports.analyzeManuscript = async (req, res) => {
 
 
         const report =
-            ManuscriptAnalyzer.analyze(manuscript);
+            await ManuscriptAnalyzer.analyze(manuscript);
 
         return res.json({
             success: true,

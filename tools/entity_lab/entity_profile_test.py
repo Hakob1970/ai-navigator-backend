@@ -1,78 +1,13 @@
 import spacy
+import json
+
+from tools.entity_lab.semantic_openrouter import (
+    SemanticOpenRouterClient
+)
 
 nlp = spacy.load("en_core_web_sm")
 
 
-text = """
-  **The Fall of the Kingdom**
-                    
-
-                        
-                    
-
-                        In the heart of Eldoria, a kingdom shrouded in mist and magic, dawn broke with an eerie stillness. The sun's rays struggled to pierce through the thick clouds, casting shadows over the ancient spires of Castle Aeloria, where whispers of treachery danced like ghosts in the air. The kingdom had thrived for centuries under the benevolent rule of Queen Elara, but now, a dark omen loomed over her realm—a prophecy foretelling its fall.
-                    
-
-                        
-                    
-
-                        In the bustling village of Brighthollow, nestled at the edge of the Whispering Woods, tales of the kingdom's downfall reached the ears of a young blacksmith named Kaelan. With tousled hair and eyes the color of stormy seas, he forged weapons and dreams in equal measure. Each clang of metal against metal echoed his ambition, yet his heart carried the weight of uncertainty. He had always felt different, drawn to the woods where the trees spoke in ancient tongues and the wind whispered secrets of forgotten heroes.
-                    
-
-                        
-                    
-
-                        One fateful evening, as twilight draped its velvet cloak over the land, Kaelan stumbled upon a hidden glade, illuminated by the soft glow of fireflies. In the center stood an ancient stone altar, adorned with symbols of a long-lost civilization. As he approached, a surge of energy coursed through him, igniting a flicker of courage he had never known. It was there that he found the Sword of Lirael, its blade shimmering with a light that banished the shadows. The moment he grasped the hilt, visions flooded his mind—of battles fought, of sacrifices made, and of a kingdom in peril.
-                    
-
-                        
-                    
-
-                        With the sword in hand, Kaelan felt an inexplicable call to action. The village had been plagued by strange occurrences—crops withering, livestock disappearing, and a growing darkness that seeped from the depths of the Whispering Woods. The elders spoke of a malevolent force awakening, an ancient sorcerer named Malakar, who sought to reclaim his dominion over Eldoria. Driven by a newfound purpose, Kaelan set forth, determined to confront the darkness and protect his home.
-                    
-
-                        
-                    
-
-                        As he journeyed deeper into the woods, he was joined by an unlikely companion—Lira, a fierce elven warrior with emerald eyes and a heart as wild as the forest itself. She had witnessed the devastation wrought by Malakar and pledged her loyalty to Kaelan's cause. Their bond grew through shared trials, laughter, and the unspoken understanding of a shared destiny. Together, they traversed treacherous paths, facing the sorcerer's minions and overcoming their own fears.
-                    
-
-                        
-                    
-
-                        However, their greatest challenge lay ahead. Upon reaching the Ruins of Eldar, the last stronghold against Malakar, they discovered the sorcerer's dark magic seeping through the stones, twisting the very fabric of reality. With every step, the air thickened with despair, and Kaelan felt the weight of his kingdom upon his shoulders. He knew that the fate of Eldoria rested in his hands, yet self-doubt gnawed at him. Was he truly the hero the prophecy spoke of, or merely an unknown blacksmith caught in a web of fate?
-                    
-
-                        
-                    
-
-                        In the heart of the ruins, Malakar awaited, cloaked in shadows and malice. His voice, a chilling whisper, promised power and dominion to those who would kneel. Kaelan felt the temptation tug at his heart, but the memory of his village, of Lira, and of the kingdom he loved ignited a fire within him. With Lira at his side, they charged into battle, the Sword of Lirael gleaming like a beacon of hope.
-                    
-
-                        
-                    
-
-                        The clash of steel rang through the desolation as Kaelan and Lira fought valiantly against the dark sorcerer. With each strike, Kaelan felt his doubts begin to fade. He fought not only for his kingdom but for the light that still flickered within every heart in Eldoria. In a moment of desperation, he unleashed the true power of the sword—a blinding light that shattered the darkness surrounding Malakar, revealing the remnants of a once-great sorcerer now stripped of his might.
-                    
-
-                        
-                    
-
-                        With a final, desperate surge, Kaelan thrust the sword forward, banishing Malakar into the void from whence he came. Silence fell, the oppressive gloom lifting like a shroud. As the ruins began to crumble, Kaelan and Lira escaped, the weight of their victory settling into their souls. They had not only saved their kingdom but had also uncovered the hero within themselves.
-                    
-
-                        
-                    
-
-                        Returning to Brighthollow, the villagers hailed them as champions. The sun broke through the clouds, bathing the land in warm light, and the first blossoms of spring began to bloom, a reminder that even in the darkest of times, hope could flourish. Kaelan stood before the gathered crowd, the Sword of Lirael at his side, no longer an unknown blacksmith but a hero forged in the fires of courage and love.
-                    
-
-                        
-                    
-
-                        In the years that followed, tales of The Fall of the Kingdom became legends, whispered in the winds that danced through Eldoria. And in the heart of the Whispering Woods, the glade where Kaelan had discovered his destiny remained, a sacred place where heroes were born, and the light of hope forever shone.
-                    
-"""
 
 doc = nlp(text)
 
@@ -204,7 +139,7 @@ for token in doc:
     end = max(token.i, head.i) + 1
 
     spans.append({
-        "text": f"{token.text} {head.text}",
+        "text": doc[start:end].text,
         "modifier": token.text,
         "head": head.text,
         "relation": token.dep_,
@@ -526,184 +461,6 @@ for observation in span_observations:
 
 
 # ==========================================
-# CONTEXT EVIDENCE COLLECTOR
-# ==========================================
-
-print("\n=== CONTEXT EVIDENCE COLLECTOR ===\n")
-
-
-for token in doc:
-
-    if token.dep_ != "nsubj":
-        continue
-
-    subject = token.text
-    verb = token.head.text
-
-    objects = []
-
-    for child in token.head.children:
-
-        if child.dep_ in {"dobj", "attr", "pobj"}:
-            objects.append(child.text)
-
-    print(f"SUBJECT: {subject}")
-    print(f"  VERB: {verb}")
-    print(f"  OBJECTS: {objects}")
-    print()
-
-
-# ==========================================
-# RELATION COLLECTOR
-# ==========================================
-
-print("\n=== RELATION COLLECTOR ===\n")
-
-
-relations = []
-
-
-for token in doc:
-
-    # Нас интересуют только глаголы.
-    if token.pos_ not in {"VERB", "AUX"}:
-        continue
-
-    subject = None
-
-    # Ищем субъект глагола.
-    for child in token.children:
-
-        if child.dep_ in {"nsubj", "nsubjpass"}:
-            subject = child
-
-            break
-
-    if subject is None:
-        continue
-
-
-    # Ищем прямой объект.
-    for child in token.children:
-
-        if child.dep_ in {"dobj", "attr"}:
-
-            relations.append({
-                "subject": subject.text,
-                "verb": token.text,
-                "object": child.text
-            })
-
-
-    # Ищем объект через предлог.
-    for prep in token.children:
-
-        if prep.dep_ != "prep":
-            continue
-
-
-        for obj in prep.children:
-
-            if obj.dep_ != "pobj":
-                continue
-
-
-            relations.append({
-                "subject": subject.text,
-                "verb": f"{token.text}_{prep.text}",
-                "object": obj.text
-            })
-
-
-for relation in relations:
-
-    print(
-        f"{relation['subject']} "
-        f"→ {relation['verb']} "
-        f"→ {relation['object']}"
-    )
-
-
-# ==========================================
-# RELATION EVIDENCE PROFILE
-# ==========================================
-
-print("\n=== RELATION EVIDENCE PROFILE ===\n")
-
-
-relation_profiles = {}
-
-
-for relation in relations:
-
-    subject = relation["subject"]
-    verb = relation["verb"]
-    object_ = relation["object"]
-
-
-    # Профиль субъекта
-    if subject not in relation_profiles:
-
-        relation_profiles[subject] = {
-            "acts": [],
-            "acted_on_by": []
-        }
-
-
-    relation_profiles[subject]["acts"].append({
-        "verb": verb,
-        "object": object_
-    })
-
-
-    # Профиль объекта
-    if object_ not in relation_profiles:
-
-        relation_profiles[object_] = {
-            "acts": [],
-            "acted_on_by": []
-        }
-
-
-    relation_profiles[object_]["acted_on_by"].append({
-        "verb": verb,
-        "subject": subject
-    })
-
-
-for entity, profile in relation_profiles.items():
-
-    print(f"ENTITY: {entity}")
-
-
-    if profile["acts"]:
-
-        print("  ACTS:")
-
-        for action in profile["acts"]:
-
-            print(
-                f"    {action['verb']} "
-                f"→ {action['object']}"
-            )
-
-
-    if profile["acted_on_by"]:
-
-        print("  ACTED ON BY:")
-
-        for action in profile["acted_on_by"]:
-
-            print(
-                f"    {action['subject']} "
-                f"→ {action['verb']}"
-            )
-
-
-    print()
-
-
-# ==========================================
 # ENTITY PROFILE BUILDER
 # ==========================================
 
@@ -724,8 +481,6 @@ def get_profile(name):
             "dependencies": set(),
             "heads": set(),
             "ner": set(),
-            "acts": [],
-            "acted_on_by": []
         }
 
     return entity_profiles[name]
@@ -752,31 +507,6 @@ for token in doc:
         profile["ner"].add(token.ent_type_)
 
 
-# ------------------------------------------
-# RELATION EVIDENCE
-# ------------------------------------------
-
-for relation in relations:
-
-    subject = relation["subject"]
-    verb = relation["verb"]
-    object_ = relation["object"]
-
-    subject_profile = get_profile(subject)
-
-    subject_profile["acts"].append({
-        "verb": verb,
-        "object": object_
-    })
-
-
-    object_profile = get_profile(object_)
-
-    object_profile["acted_on_by"].append({
-        "subject": subject,
-        "verb": verb
-    })
-
 
 # ------------------------------------------
 # DISPLAY
@@ -817,849 +547,8 @@ for name, profile in entity_profiles.items():
     )
 
 
-    if profile["acts"]:
-
-        print("  ACTS:")
-
-        for action in profile["acts"]:
-
-            print(
-                f"    {action['verb']} "
-                f"→ {action['object']}"
-            )
-
-
-    if profile["acted_on_by"]:
-
-        print("  ACTED ON BY:")
-
-        for action in profile["acted_on_by"]:
-
-            print(
-                f"    {action['subject']} "
-                f"→ {action['verb']}"
-            )
-
     print()
 
-
-# ==========================================
-# IDENTITY EVIDENCE
-# ==========================================
-
-print("\n=== IDENTITY EVIDENCE ===\n")
-
-
-entity_names = list(entity_profiles.keys())
-
-
-for i in range(len(entity_names)):
-
-    first = entity_names[i]
-
-    for j in range(i + 1, len(entity_names)):
-
-        second = entity_names[j]
-
-
-        first_normalized = first.lower()
-        second_normalized = second.lower()
-
-
-        evidence = []
-
-
-        # ----------------------------------
-        # SURFACE FORM
-        # ----------------------------------
-
-        if first_normalized == second_normalized:
-
-            evidence.append(
-                "same_normalized_form"
-            )
-
-
-        # ----------------------------------
-        # NER AGREEMENT
-        # ----------------------------------
-
-        first_ner = entity_profiles[first]["ner"]
-        second_ner = entity_profiles[second]["ner"]
-
-
-        if (
-            first_ner
-            and second_ner
-            and first_ner.intersection(second_ner)
-        ):
-
-            evidence.append(
-                "shared_ner_type"
-            )
-
-
-        # ----------------------------------
-        # POS AGREEMENT
-        # ----------------------------------
-
-        first_pos = entity_profiles[first]["pos"]
-        second_pos = entity_profiles[second]["pos"]
-
-
-        if (
-            first_pos
-            and second_pos
-            and first_pos.intersection(second_pos)
-        ):
-
-            evidence.append(
-                "shared_pos"
-            )
-
-
-        # ----------------------------------
-        # RELATION VERBS
-        # ----------------------------------
-
-        first_verbs = {
-            action["verb"]
-            for action in entity_profiles[first]["acts"]
-        }
-
-        second_verbs = {
-            action["verb"]
-            for action in entity_profiles[second]["acts"]
-        }
-
-
-        if first_verbs.intersection(second_verbs):
-
-            evidence.append(
-                "shared_action"
-            )
-
-
-        # ----------------------------------
-        # DISPLAY
-        # ----------------------------------
-
-        if evidence:
-
-            print(
-                f"{first} ↔ {second}"
-            )
-
-            for item in evidence:
-
-                print(
-                    f"  EVIDENCE: {item}"
-                )
-
-            print()
-
-
-
-# ==========================================
-# RELATION IDENTITY EVIDENCE
-# ==========================================
-
-print("\n=== RELATION IDENTITY EVIDENCE ===\n")
-
-
-entity_names = list(entity_profiles.keys())
-
-
-for i in range(len(entity_names)):
-
-    first = entity_names[i]
-
-    for j in range(i + 1, len(entity_names)):
-
-        second = entity_names[j]
-
-
-        evidence = []
-
-
-        # ----------------------------------
-        # ACTION TARGETS
-        # ----------------------------------
-
-        first_targets = {
-            action["object"]
-            for action in entity_profiles[first]["acts"]
-        }
-
-        second_targets = {
-            action["object"]
-            for action in entity_profiles[second]["acts"]
-        }
-
-
-        shared_targets = (
-            first_targets
-            .intersection(second_targets)
-        )
-
-
-        if shared_targets:
-
-            evidence.append(
-                f"shared_targets={sorted(shared_targets)}"
-            )
-
-
-        # ----------------------------------
-        # ACTION VERBS
-        # ----------------------------------
-
-        first_verbs = {
-            action["verb"]
-            for action in entity_profiles[first]["acts"]
-        }
-
-        second_verbs = {
-            action["verb"]
-            for action in entity_profiles[second]["acts"]
-        }
-
-
-        shared_verbs = (
-            first_verbs
-            .intersection(second_verbs)
-        )
-
-
-        if shared_verbs:
-
-            evidence.append(
-                f"shared_verbs={sorted(shared_verbs)}"
-            )
-
-
-        # ----------------------------------
-        # ACTED ON BY
-        # ----------------------------------
-
-        first_subjects = {
-            action["subject"]
-            for action in entity_profiles[first]["acted_on_by"]
-        }
-
-        second_subjects = {
-            action["subject"]
-            for action in entity_profiles[second]["acted_on_by"]
-        }
-
-
-        shared_subjects = (
-            first_subjects
-            .intersection(second_subjects)
-        )
-
-
-        if shared_subjects:
-
-            evidence.append(
-                f"shared_relation_subjects={sorted(shared_subjects)}"
-            )
-
-
-        # ----------------------------------
-        # DISPLAY
-        # ----------------------------------
-
-        if evidence:
-
-            print(
-                f"{first} ↔ {second}"
-            )
-
-            for item in evidence:
-
-                print(
-                    f"  EVIDENCE: {item}"
-                )
-
-            print()
-
-
-# ==========================================
-# CONTEXT IDENTITY EVIDENCE
-# ==========================================
-
-print("\n=== CONTEXT IDENTITY EVIDENCE ===\n")
-
-
-entity_names = list(entity_profiles.keys())
-
-
-for i in range(len(entity_names)):
-
-    first = entity_names[i]
-
-    for j in range(i + 1, len(entity_names)):
-
-        second = entity_names[j]
-
-
-        evidence = []
-
-
-        # ----------------------------------
-        # SHARED HEADS
-        # ----------------------------------
-
-        first_heads = entity_profiles[first]["heads"]
-        second_heads = entity_profiles[second]["heads"]
-
-        shared_heads = (
-            first_heads
-            .intersection(second_heads)
-        )
-
-        if shared_heads:
-
-            evidence.append(
-                f"shared_heads={sorted(shared_heads)}"
-            )
-
-
-        # ----------------------------------
-        # SHARED DEPENDENCY ROLES
-        # ----------------------------------
-
-        first_dependencies = (
-            entity_profiles[first]["dependencies"]
-        )
-
-        second_dependencies = (
-            entity_profiles[second]["dependencies"]
-        )
-
-        shared_dependencies = (
-            first_dependencies
-            .intersection(second_dependencies)
-        )
-
-        if shared_dependencies:
-
-            evidence.append(
-                f"shared_dependencies="
-                f"{sorted(shared_dependencies)}"
-            )
-
-
-        # ----------------------------------
-        # SHARED SURFACE FORMS
-        # ----------------------------------
-
-        first_forms = (
-            entity_profiles[first]["surface_forms"]
-        )
-
-        second_forms = (
-            entity_profiles[second]["surface_forms"]
-        )
-
-        shared_forms = (
-            first_forms
-            .intersection(second_forms)
-        )
-
-        if shared_forms:
-
-            evidence.append(
-                f"shared_surface_forms="
-                f"{sorted(shared_forms)}"
-            )
-
-
-        # ----------------------------------
-        # DISPLAY
-        # ----------------------------------
-
-        if evidence:
-
-            print(
-                f"{first} ↔ {second}"
-            )
-
-            for item in evidence:
-
-                print(
-                    f"  EVIDENCE: {item}"
-                )
-
-            print()
-
-
-# ==========================================
-# CHARACTER EVIDENCE
-# ==========================================
-
-print("\n=== CHARACTER EVIDENCE ===\n")
-
-
-character_evidence = {}
-
-
-for name, profile in entity_profiles.items():
-
-    observations = []
-
-
-    # ----------------------------------
-    # PERSON NER OBSERVATION
-    # ----------------------------------
-
-    if "PERSON" in profile["ner"]:
-
-        observations.append({
-            "source": "ner",
-            "observation": "PERSON"
-        })
-
-
-    # ----------------------------------
-    # SUBJECT ROLE OBSERVATION
-    # ----------------------------------
-
-    if "nsubj" in profile["dependencies"]:
-
-        observations.append({
-            "source": "syntax",
-            "observation": "SUBJECT_ROLE"
-        })
-
-
-    # ----------------------------------
-    # PASSIVE SUBJECT OBSERVATION
-    # ----------------------------------
-
-    if "nsubjpass" in profile["dependencies"]:
-
-        observations.append({
-            "source": "syntax",
-            "observation": "PASSIVE_SUBJECT"
-        })
-
-
-    # ----------------------------------
-    # ACTION OBSERVATION
-    # ----------------------------------
-
-    if profile["acts"]:
-
-        observations.append({
-            "source": "action",
-            "observation": "PERFORMS_ACTION"
-        })
-
-
-    # ----------------------------------
-    # RELATION PARTICIPATION OBSERVATION
-    # ----------------------------------
-
-    if profile["acted_on_by"]:
-
-        observations.append({
-            "source": "relation",
-            "observation": "PARTICIPATES_IN_RELATION"
-        })
-
-
-    # ----------------------------------
-    # REPEATED MENTION OBSERVATION
-    # ----------------------------------
-
-    if profile["mentions"] > 1:
-
-        observations.append({
-            "source": "repetition",
-            "observation": "REPEATED_MENTIONS"
-        })
-
-
-    character_evidence[name] = observations
-
-
-# ----------------------------------
-# DISPLAY
-# ----------------------------------
-
-for name, observations in character_evidence.items():
-
-    if not observations:
-        continue
-
-
-    print(f"ENTITY: {name}")
-
-    print("  OBSERVATIONS:")
-
-
-    for item in observations:
-
-        print(
-            f"    SOURCE: "
-            f"{item['source']}"
-        )
-
-        print(
-            f"    OBSERVATION: "
-            f"{item['observation']}"
-        )
-
-
-    print()
-
-
-# ==========================================
-# CHARACTER RESOLUTION INPUT
-# ==========================================
-
-print("\n=== CHARACTER RESOLUTION INPUT ===\n")
-
-
-for name, profile in entity_profiles.items():
-
-    print(f"ENTITY: {name}")
-
-    print(
-        f"  MENTIONS: "
-        f"{profile['mentions']}"
-    )
-
-    print(
-        f"  NER: "
-        f"{sorted(profile['ner'])}"
-    )
-
-    print(
-        f"  POS: "
-        f"{sorted(profile['pos'])}"
-    )
-
-    print(
-        f"  DEPENDENCIES: "
-        f"{sorted(profile['dependencies'])}"
-    )
-
-    print(
-        f"  HEADS: "
-        f"{sorted(profile['heads'])}"
-    )
-
-    print(
-        f"  SURFACE FORMS: "
-        f"{sorted(profile['surface_forms'])}"
-    )
-
-
-    if profile["acts"]:
-
-        print("  ACTS:")
-
-        for action in profile["acts"]:
-
-            print(
-                f"    {action['verb']} "
-                f"→ {action['object']}"
-            )
-
-
-    if profile["acted_on_by"]:
-
-        print("  ACTED ON BY:")
-
-        for action in profile["acted_on_by"]:
-
-            print(
-                f"    {action['subject']} "
-                f"→ {action['verb']}"
-            )
-
-    print()
-
-
-
-# ==========================================
-# EVIDENCE CLASSIFIER
-# ==========================================
-
-print("\n=== EVIDENCE CLASSIFIER ===\n")
-
-
-classified_evidence = {}
-
-
-for name, observations in character_evidence.items():
-
-    classified = []
-
-
-    for observation in observations:
-
-        source = observation["source"]
-        observation_type = observation["observation"]
-
-
-        # ----------------------------------
-        # CHARACTER SUPPORT
-        # ----------------------------------
-
-        if (
-            source == "ner"
-            and observation_type == "PERSON"
-        ):
-
-            classified.append({
-                "source": source,
-                "observation": observation_type,
-                "hypothesis": "CHARACTER",
-                "direction": "SUPPORTS",
-                "strength": "STRONG"
-            })
-
-            continue
-
-
-        # ----------------------------------
-        # NEUTRAL OBSERVATIONS
-        # ----------------------------------
-
-        classified.append({
-            "source": source,
-            "observation": observation_type,
-            "hypothesis": "CHARACTER",
-            "direction": "NEUTRAL",
-            "strength": "WEAK"
-        })
-
-
-    classified_evidence[name] = classified
-
-
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for name, observations in classified_evidence.items():
-
-    if not observations:
-        continue
-
-
-    print(f"ENTITY: {name}")
-
-
-    for item in observations:
-
-        print(
-            f"  SOURCE: "
-            f"{item['source']}"
-        )
-
-        print(
-            f"  OBSERVATION: "
-            f"{item['observation']}"
-        )
-
-        print(
-            f"  HYPOTHESIS: "
-            f"{item['hypothesis']}"
-        )
-
-        print(
-            f"  DIRECTION: "
-            f"{item['direction']}"
-        )
-
-        print(
-            f"  STRENGTH: "
-            f"{item['strength']}"
-        )
-
-        print()
-
-# ==========================================
-# CHARACTER HYPOTHESIS
-# ==========================================
-
-print("\n=== CHARACTER HYPOTHESIS ===\n")
-
-
-for name, profile in entity_profiles.items():
-
-    supporting = []
-    contradicting = []
-    neutral = []
-
-
-    # ----------------------------------
-    # SUPPORTING EVIDENCE
-    # ----------------------------------
-
-    if "PERSON" in profile["ner"]:
-        supporting.append("person_ner")
-
-    if "nsubj" in profile["dependencies"]:
-        supporting.append("subject_role")
-
-    if "nsubjpass" in profile["dependencies"]:
-        supporting.append("passive_subject")
-
-    if profile["acts"]:
-        supporting.append("performs_actions")
-
-    if profile["acted_on_by"]:
-        supporting.append("participates_in_relations")
-
-    if profile["mentions"] > 1:
-        supporting.append("repeated_mentions")
-
-
-    # ----------------------------------
-    # CONTRADICTING EVIDENCE
-    # ----------------------------------
-
-    non_person_ner = (
-        profile["ner"]
-        - {"PERSON"}
-    )
-
-    if non_person_ner:
-
-        contradicting.append(
-            f"non_person_ner={sorted(non_person_ner)}"
-        )
-
-
-    if "dobj" in profile["dependencies"]:
-        contradicting.append("object_role")
-
-
-    if "attr" in profile["dependencies"]:
-        contradicting.append("attribute_role")
-
-
-    if "compound" in profile["dependencies"]:
-        contradicting.append("compound_role")
-
-
-    # ----------------------------------
-    # NEUTRAL EVIDENCE
-    # ----------------------------------
-
-    if profile["pos"]:
-        neutral.append("pos")
-
-    if profile["heads"]:
-        neutral.append("head")
-
-    if profile["surface_forms"]:
-        neutral.append("surface_form")
-
-
-    # ----------------------------------
-    # DISPLAY
-    # ----------------------------------
-
-    print(f"ENTITY: {name}")
-
-
-    if supporting:
-
-        print("  SUPPORTING:")
-
-        for item in supporting:
-
-            print(
-                f"    {item}"
-            )
-
-
-    if contradicting:
-
-        print("  CONTRADICTING:")
-
-        for item in contradicting:
-
-            print(
-                f"    {item}"
-            )
-
-
-    if neutral:
-
-        print("  NEUTRAL:")
-
-        for item in neutral:
-
-            print(
-                f"    {item}"
-            )
-
-
-    print()
-
-
-# ==========================================
-# OBSERVATION PROFILE
-# ==========================================
-
-print("\n=== OBSERVATION PROFILE ===\n")
-
-
-for name, profile in entity_profiles.items():
-
-    print(f"ENTITY: {name}")
-
-    print("  OBSERVATIONS:")
-
-    print(
-        f"    NER: "
-        f"{sorted(profile['ner'])}"
-    )
-
-    print(
-        f"    POS: "
-        f"{sorted(profile['pos'])}"
-    )
-
-    print(
-        f"    DEPENDENCIES: "
-        f"{sorted(profile['dependencies'])}"
-    )
-
-    print(
-        f"    HEADS: "
-        f"{sorted(profile['heads'])}"
-    )
-
-    print(
-        f"    MENTIONS: "
-        f"{profile['mentions']}"
-    )
-
-    print(
-        f"    ACTS: "
-        f"{'yes' if profile['acts'] else 'no'}"
-    )
-
-    print(
-        f"    ACTED_ON_BY: "
-        f"{'yes' if profile['acted_on_by'] else 'no'}"
-    )
-
-    print(
-        f"    SURFACE_FORMS: "
-        f"{sorted(profile['surface_forms'])}"
-    )
-
-    print()
 
 # ==========================================
 # SEMANTIC CONTEXT COLLECTOR
@@ -2775,6 +1664,702 @@ for item in named_role_observations:
 
 
 # ==========================================
+# UNIVERSAL SEMANTIC INTERPRETER
+# ==========================================
+
+print("\n=== UNIVERSAL SEMANTIC INTERPRETER ===\n")
+
+
+semantic_observations = []
+
+
+
+def span_contains(outer, inner):
+    return (
+        outer["start"] <= inner["start"]
+        and outer["end"] >= inner["end"]
+        and (
+            outer["start"] < inner["start"]
+            or outer["end"] > inner["end"]
+        )
+    )
+
+
+for span in span_records:
+
+    semantic_features = {}
+    basis = []
+
+
+    # ------------------------------------------
+    # NER RELATION
+    # ------------------------------------------
+
+    ner_relations = []
+
+
+    for ent in doc.ents:
+
+        relation = get_span_relation(
+            span,
+            ent
+        )
+
+
+        if relation is None:
+            continue
+
+
+        ner_relations.append({
+            "relation": relation,
+            "text": ent.text,
+            "label": ent.label_,
+            "span": {
+                "start": ent.start,
+                "end": ent.end
+            }
+        })
+
+
+        basis.append({
+            "source": "NER",
+            "type": "NER_SPAN_RELATION",
+            "reference": {
+                "relation": relation,
+                "start": ent.start,
+                "end": ent.end
+            }
+        })
+
+
+    if ner_relations:
+
+        semantic_features["ner_relation"] = (
+            ner_relations
+        )
+
+
+
+
+    # ------------------------------------------
+    # STRUCTURAL RELATION
+    # ------------------------------------------
+
+    structural_relation = {
+        "type": span["kind"]
+    }
+
+
+    if span["kind"] in {
+        "compound",
+        "amod"
+    }:
+
+        structural_relation.update({
+            "modifier": span["parts"]["modifier"],
+            "head": span["parts"]["head"]
+        })
+
+
+    elif span["kind"] == "prepositional":
+
+        structural_relation.update({
+            "head": span["parts"]["head"],
+            "preposition": span["parts"]["prep"],
+            "object": span["parts"]["object"]
+        })
+
+
+    semantic_features["structural_relation"] = (
+        structural_relation
+    )
+
+
+    basis.append({
+        "source": "STRUCTURAL_SPAN",
+        "type": "STRUCTURAL_SPAN",
+        "reference": {
+            "start": span["start"],
+            "end": span["end"]
+        }
+    })
+
+
+    # ------------------------------------------
+    # STRUCTURAL CONTAINMENT
+    # ------------------------------------------
+
+    containing_spans = [
+        outer
+        for outer in span_records
+        if span_contains(outer, span)
+    ]
+
+
+    if containing_spans:
+
+        most_specific_outer = min(
+            containing_spans,
+            key=lambda item:
+                item["end"] - item["start"]
+        )
+
+
+        semantic_features["contextual_relation"] = {
+            "type": "nested_expression",
+            "outer_span": {
+                "start": most_specific_outer["start"],
+                "end": most_specific_outer["end"]
+            }
+        }
+
+
+        basis.append({
+            "source": "STRUCTURAL_SPAN",
+            "type": "CONTAINMENT",
+            "reference": {
+                "start": most_specific_outer["start"],
+                "end": most_specific_outer["end"]
+            }
+        })
+
+
+    # ------------------------------------------
+    # SEMANTIC CONTEXT
+    # ------------------------------------------
+
+    context_parts = []
+
+
+    for part_name in span["parts"].values():
+
+        if not isinstance(part_name, str):
+            continue
+
+
+        if part_name not in semantic_context:
+            continue
+
+
+        context = semantic_context[part_name]
+
+
+        context_parts.append({
+            "entity": part_name,
+            "modifiers": sorted(
+                context["modifiers"]
+            ),
+            "appositions": sorted(
+                context["appositions"]
+            ),
+            "descriptions": sorted(
+                context["descriptions"]
+            )
+        })
+
+
+    if context_parts:
+
+        semantic_features["contextual_relation"] = (
+            semantic_features.get(
+                "contextual_relation",
+                {}
+            )
+        )
+
+
+        semantic_features["contextual_relation"][
+            "context_parts"
+        ] = context_parts
+
+
+        basis.append({
+            "source": "SEMANTIC_CONTEXT",
+            "type": "CONTEXT",
+            "reference": {
+                "parts": [
+                    item["entity"]
+                    for item in context_parts
+                ]
+            }
+        })
+
+
+    # ------------------------------------------
+    # RELATIONAL CONTEXT
+    # ------------------------------------------
+
+    relational_context = {
+        "entity": span["text"],
+        "span": {
+            "start": span["start"],
+            "end": span["end"]
+        },
+        "relations": []
+    }
+
+
+    # ------------------------------------------
+    # EXTERNAL / INTERNAL RELATIONS
+    # ------------------------------------------
+
+    span_tokens = list(
+        doc[
+            span["start"]:
+            span["end"]
+        ]
+    )
+
+
+    for token in span_tokens:
+
+        head_inside = (
+            span["start"]
+            <= token.head.i
+            <
+            span["end"]
+        )
+
+
+        scope = (
+            "INTERNAL"
+            if head_inside
+            else "EXTERNAL"
+        )
+
+
+        relational_context["relations"].append({
+            "scope": scope,
+
+            "anchor": {
+                "token": token.text,
+                "index": token.i
+            },
+
+            "relation": {
+                "dependency": token.dep_
+            },
+
+            "governor": {
+                "token": token.head.text,
+                "index": token.head.i,
+                "lemma": token.head.lemma_,
+                "pos": token.head.pos_
+            }
+        })
+
+
+    # ------------------------------------------
+    # NESTED RELATIONS
+    # ------------------------------------------
+
+    containing_spans = [
+        outer
+        for outer in span_records
+        if span_contains(outer, span)
+    ]
+
+
+    for outer in containing_spans:
+
+        for token in span_tokens:
+
+            head_inside_current_span = (
+                span["start"]
+                <= token.head.i
+                <
+                span["end"]
+            )
+
+
+            head_inside_outer_span = (
+                outer["start"]
+                <= token.head.i
+                <
+                outer["end"]
+            )
+
+
+            if (
+                not head_inside_current_span
+                and head_inside_outer_span
+            ):
+
+                relational_context["relations"].append({
+                    "scope": "NESTED",
+
+                    "anchor": {
+                        "token": token.text,
+                        "index": token.i
+                    },
+
+                    "relation": {
+                        "dependency": token.dep_
+                    },
+
+                    "governor": {
+                        "token": token.head.text,
+                        "index": token.head.i,
+                        "lemma": token.head.lemma_,
+                        "pos": token.head.pos_
+                    },
+
+                    "containing_span": {
+                        "text": outer["text"],
+                        "start": outer["start"],
+                        "end": outer["end"]
+                    }
+                })
+
+
+    semantic_features["relational_context"] = (
+        relational_context
+    )
+
+
+    basis.append({
+        "source": "RELATIONAL_CONTEXT",
+        "type": "RELATIONAL_CONTEXT",
+        "reference": {
+            "start": span["start"],
+            "end": span["end"]
+        }
+    })
+
+
+    # ------------------------------------------
+    # SEMANTIC OBSERVATION
+    # ------------------------------------------
+
+    semantic_observation = {
+        "id": (
+            f"semantic_obs_"
+            f"{len(semantic_observations) + 1:03d}"
+        ),
+
+        "entity": span["text"],
+
+        "span": {
+            "start": span["start"],
+            "end": span["end"]
+        },
+
+        "semantic_features": (
+            semantic_features
+        ),
+
+        "basis": basis,
+
+        "source": sorted({
+            item["source"]
+            for item in basis
+        })
+    }
+
+
+    semantic_observations.append(
+        semantic_observation
+    )
+
+
+# ==========================================
+# SEMANTIC EVIDENCE INTERPRETER
+# ==========================================
+
+print("\n=== SEMANTIC EVIDENCE INTERPRETER ===\n")
+
+
+semantic_evidence_candidates = []
+
+
+# ==========================================
+# SEMANTIC REASONING PROVIDER
+# ==========================================
+
+class SemanticReasoningProvider:
+    """
+    Semantic reasoning provider.
+
+    Receives a complete semantic observation
+    and delegates semantic interpretation to
+    the configured reasoning mechanism.
+
+    This provider does NOT:
+        - modify the observation
+        - create evidence records
+        - modify hypotheses
+        - perform resolution
+        - access protected sensors
+        - use entity-name dictionaries
+    """
+
+    def __init__(self):
+
+        self.client = SemanticOpenRouterClient()
+
+    def interpret(
+        self,
+        observation
+    ):
+        """
+        Ask the semantic reasoning provider
+        to interpret one complete semantic
+        observation.
+
+        The model must return JSON only.
+        """
+
+        prompt = f"""
+You are a semantic reasoning component inside
+an Entity Analysis system.
+
+Your task is to interpret the supplied semantic
+observation using the information contained in
+the observation.
+
+Important rules:
+
+- Do not use entity-name dictionaries.
+- Do not assume that a word implies a semantic type.
+- Do not treat NER labels as ground truth.
+- Do not invent information that is not present.
+- Consider the complete observation, including:
+  structural relations,
+  semantic context,
+  relational context,
+  NER information,
+  and span boundaries.
+- Multiple interpretations are allowed.
+- If the information is insufficient, return
+  an empty interpretations list.
+- Do not perform resolution.
+- Do not create evidence records.
+
+Allowed hypotheses:
+
+CHARACTER
+OBJECT
+LOCATION
+ORGANIZATION
+VEHICLE
+CREATURE
+
+Allowed directions:
+
+SUPPORTS
+CONTRADICTS
+NEUTRAL
+UNKNOWN
+
+Allowed strengths:
+
+STRONG
+WEAK
+
+Return JSON only in exactly this structure:
+
+{{
+  "interpretations": [
+    {{
+      "hypothesis": "LOCATION",
+      "direction": "SUPPORTS",
+      "strength": "WEAK",
+      "basis": [
+        {{
+          "source": "STRUCTURAL_SPAN",
+          "type": "STRUCTURAL_SPAN"
+        }}
+      ]
+    }}
+  ]
+}}
+
+If there is not enough information to support
+a semantic interpretation, return:
+
+{{
+  "interpretations": []
+}}
+
+SEMANTIC OBSERVATION:
+
+{json.dumps(observation, ensure_ascii=False, indent=2)}
+"""
+
+        response = self.client.generate(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0
+        )
+
+        try:
+            data = json.loads(response)
+        except json.JSONDecodeError:
+            print(
+                "SEMANTIC AI INVALID JSON:",
+                response
+            )
+            return []
+
+        interpretations = data.get(
+            "interpretations",
+            []
+        )
+
+        if not isinstance(
+            interpretations,
+            list
+        ):
+            return []
+
+        return interpretations
+
+
+semantic_reasoning_provider = (
+    SemanticReasoningProvider()
+)
+
+def interpret_semantic_observation(
+    observation
+):
+    """
+    Convert a semantic observation into
+    evidence candidates.
+
+    This layer does NOT resolve the entity.
+
+    It does NOT directly modify:
+        - hypothesis status
+        - resolution
+        - candidate collector
+        - entity relation sensor
+
+    It only interprets the semantic observation
+    and prepares candidate evidence.
+
+    No entity-name dictionary is used here.
+    No hardcoded lexical marker is used here.
+    """
+
+    result = {
+        "entity": observation["entity"],
+
+        "span": {
+            "start": observation["span"]["start"],
+            "end": observation["span"]["end"]
+        },
+
+        "interpretations": (
+            semantic_reasoning_provider.interpret(
+                observation
+            )
+        ),
+
+        "basis": list(
+            observation.get(
+                "basis",
+                []
+            )
+        ),
+
+        "source": "semantic_evidence_interpreter"
+    }
+
+    return result
+
+
+# Automatic semantic AI interpretation is disabled.
+# Semantic observations remain available for the
+# post-resolution AI escalation layer.
+
+semantic_evidence_candidates = []
+
+
+for candidate in semantic_evidence_candidates:
+
+    print(
+        f"ENTITY: "
+        f"{candidate['entity']}"
+    )
+
+    print(
+        f"  SPAN: "
+        f"{candidate['span']['start']}"
+        f":"
+        f"{candidate['span']['end']}"
+    )
+
+    print(
+        f"  INTERPRETATIONS: "
+        f"{candidate['interpretations']}"
+    )
+
+    print(
+        "  BASIS:"
+    )
+
+    for item in candidate["basis"]:
+
+        print(
+            f"    {item['source']}"
+            f" | {item['type']}"
+        )
+
+    print(
+        f"  SOURCE: "
+        f"{candidate['source']}"
+    )
+
+    print()
+
+
+# ------------------------------------------
+# DISPLAY
+# ------------------------------------------
+
+for observation in semantic_observations:
+
+    print(
+        f"ENTITY: "
+        f"{observation['entity']}"
+    )
+
+    print(
+        f"  SPAN: "
+        f"{observation['span']['start']}"
+        f":"
+        f"{observation['span']['end']}"
+    )
+
+    print(
+        f"  SEMANTIC FEATURES: "
+        f"{observation['semantic_features']}"
+    )
+
+    print(
+        "  BASIS:"
+    )
+
+    for item in observation["basis"]:
+
+        print(
+            f"    {item['source']}"
+            f" | {item['type']}"
+        )
+
+    print(
+        f"  SOURCE: "
+        f"{observation['source']}"
+    )
+
+    print()
+
+
+# ==========================================
 # EVIDENCE RECORDS
 # ==========================================
 
@@ -2840,6 +2425,39 @@ def add_evidence(
             f"Invalid evidence strength: "
             f"{strength}"
         )
+
+    if (
+        token_index is not None
+        and span_start is None
+        and span_end is None
+    ):
+
+        containing_spans = [
+            span
+            for span in span_records
+            if (
+                span["start"] <= token_index
+                < span["end"]
+            )
+        ]
+
+
+        if containing_spans:
+
+            most_specific_span = min(
+                containing_spans,
+                key=lambda span:
+                    span["end"] - span["start"]
+            )
+
+
+            span_start = (
+                most_specific_span["start"]
+            )
+
+            span_end = (
+                most_specific_span["end"]
+            )
 
 
     evidence = {
@@ -3015,278 +2633,216 @@ for observation in span_observations:
                 span_end=observation["end"]
             )
 
-# ------------------------------------------
-# EVIDENCE MAPPING
-# ------------------------------------------
 
-for name, profile in entity_profiles.items():
+# --------------------------------------
+# NER SPAN INDEX
+# --------------------------------------
 
-    token = None
+ner_entities_by_token = {}
 
-    for candidate_token in doc:
+for ent in doc.ents:
 
-        if candidate_token.text == name:
-
-            token = candidate_token
-
-            break
-
-
-    if token is None:
-
-        continue
-
-
-    # ======================================
-    # CHARACTER EVIDENCE
-    # ======================================
-
-    character_observations = []
-
-
-    if "PERSON" in profile["ner"]:
-
-        character_observations.append(
-            "NER_PERSON"
-        )
-
-
-    if profile["acts"]:
-
-        character_observations.append(
-            "PERFORMS_ACTION"
-        )
-
-
-    if name in dialogue_entities:
-
-        character_observations.append(
-            "DIALOGUE_PARTICIPANT"
-        )
-
-
-    # ==================================
-    # NAMED ROLE OBSERVATION
-    # ==================================
-
-    named_roles = [
-        item["role"]
-        for item in named_role_observations
-        if item["entity"] == name
-    ]
-
-
-    if named_roles:
-
-        character_observations.append(
-            "NAMED_ROLE"
-        )
-
-
-    if character_observations:
-
-        for observation in character_observations:
-
-            if observation == "NER_PERSON":
-
-                direction = "SUPPORTS"
-                strength = "STRONG"
-
-
-            elif observation == "PERFORMS_ACTION":
-
-                # Performing an action is only
-                # a raw observation.
-                #
-                # It does not prove CHARACTER
-                # by itself.
-
-                direction = "NEUTRAL"
-                strength = "WEAK"
-
-
-            elif observation == "NAMED_ROLE":
-
-                # Explicit role-name construction is strong character evidence.
-
-                direction = "SUPPORTS"
-                strength = "STRONG"
-
-
-            else:
-
-                direction = "NEUTRAL"
-                strength = "WEAK"
-
-
-            add_evidence(
-                entity=name,
-                source="evidence_mapping",
-                observation=observation,
-                hypothesis="CHARACTER",
-                direction=direction,
-                strength=strength,
-                token_index=token.i
-            )
-
-
-    # ======================================
-    # LOCATION EVIDENCE
-    # ======================================
-
-    location_observations = []
-
-
-    if (
-        "GPE" in profile["ner"]
-        or "LOC" in profile["ner"]
+    for token_index in range(
+        ent.start,
+        ent.end
     ):
 
-        location_observations.append(
-            "NER_LOCATION"
-        )
+        ner_entities_by_token[token_index] = ent
 
 
-    semantic = semantic_context.get(
-        name,
-        {}
+# --------------------------------------
+# MENTION-LEVEL EVIDENCE MAPPING
+# --------------------------------------
+#
+# Entity Profile is aggregate-by-name.
+#
+# Therefore it must NOT be used to recover
+# the position of a particular mention.
+#
+# Mention-level evidence comes from sensors
+# that already preserve token/span coordinates:
+#
+#   - Entity Relation Sensor
+#   - Dialogue Participant Sensor
+#   - Named Role Sensor
+#
+# NER span evidence is mapped separately below.
+#
+
+
+# ======================================
+# ENTITY RELATION → CHARACTER EVIDENCE
+# ======================================
+
+for observation in entity_relation_observations:
+
+    subject = observation["subject"]
+
+    subject_token_index = (
+        observation["subject_token_index"]
+    )
+
+    add_evidence(
+
+        entity=subject,
+
+        source="evidence_mapping",
+
+        observation="PERFORMS_ACTION",
+
+        hypothesis="CHARACTER",
+
+        direction="NEUTRAL",
+
+        strength="WEAK",
+
+        token_index=subject_token_index
+
     )
 
 
-    semantic_values = set()
+# ======================================
+# DIALOGUE PARTICIPANT → CHARACTER
+# ======================================
 
+for participant in dialogue_participants:
 
-    for value in semantic.get(
-        "modifiers",
-        set()
-    ):
+    add_evidence(
 
-        semantic_values.add(
-            value.lower()
-        )
+        entity=participant["entity"],
 
+        source="evidence_mapping",
 
-    for value in semantic.get(
-        "appositions",
-        set()
-    ):
+        observation="DIALOGUE_PARTICIPANT",
 
-        semantic_values.add(
-            value.lower()
-        )
+        hypothesis="CHARACTER",
 
+        direction="NEUTRAL",
 
-    if (
-        semantic_values
-        & location_markers
-    ):
+        strength="WEAK",
 
-        location_observations.append(
-            "LOCATION_SEMANTIC_MARKER"
-        )
+        token_index=participant["token_index"]
 
-
-    if location_observations:
-
-        for observation in location_observations:
-
-            if observation == "NER_LOCATION":
-
-                strength = "STRONG"
-
-
-            else:
-
-                strength = "WEAK"
-
-
-            add_evidence(
-                entity=name,
-                source="evidence_mapping",
-                observation=observation,
-                hypothesis="LOCATION",
-                direction="SUPPORTS",
-                strength=strength,
-                token_index=token.i
-            )
-
-
-    # ======================================
-    # OBJECT EVIDENCE
-    # ======================================
-
-    object_observations = []
-
-
-    if "FAC" in profile["ner"]:
-
-        object_observations.append(
-            "NER_FACILITY_OR_OBJECT"
-        )
-
-
-    semantic_object_values = set()
-
-
-    semantic_object_values.add(
-        name.lower()
     )
 
 
-    for value in semantic.get(
-        "modifiers",
-        set()
-    ):
+# ======================================
+# NAMED ROLE → CHARACTER
+# ======================================
 
-        semantic_object_values.add(
-            value.lower()
+for observation in named_role_observations:
+
+    add_evidence(
+
+        entity=observation["entity"],
+
+        source="evidence_mapping",
+
+        observation="NAMED_ROLE",
+
+        hypothesis="CHARACTER",
+
+        direction="SUPPORTS",
+
+        strength="STRONG",
+
+        token_index=observation["token_index"]
+
+    )
+
+
+# ======================================
+# SEMANTIC MARKER EVIDENCE
+# ======================================
+#
+# Semantic markers remain observation-based.
+#
+# They are intentionally empty unless a future
+# semantic sensor supplies verified markers.
+#
+# Do not derive location/object meaning from
+# the aggregate Entity Profile.
+#
+
+# --------------------------------------
+# NER SPAN EVIDENCE
+# --------------------------------------
+
+for ent in doc.ents:
+
+    if ent.label_ == "PERSON":
+
+        add_evidence(
+
+            entity=ent.text,
+
+            source="evidence_mapping",
+
+            observation="NER_PERSON",
+
+            hypothesis="CHARACTER",
+
+            direction="SUPPORTS",
+
+            strength="STRONG",
+
+            token_index=ent.start,
+
+            span_start=ent.start,
+
+            span_end=ent.end
+
         )
 
 
-    for value in semantic.get(
-        "appositions",
-        set()
-    ):
+    elif ent.label_ in {"GPE", "LOC"}:
 
-        semantic_object_values.add(
-            value.lower()
+        add_evidence(
+
+            entity=ent.text,
+
+            source="evidence_mapping",
+
+            observation="NER_LOCATION",
+
+            hypothesis="LOCATION",
+
+            direction="SUPPORTS",
+
+            strength="STRONG",
+
+            token_index=ent.start,
+
+            span_start=ent.start,
+
+            span_end=ent.end
+
         )
 
 
-    if (
-        semantic_object_values
-        & object_markers
-    ):
+    elif ent.label_ == "FAC":
 
-        object_observations.append(
-            "OBJECT_SEMANTIC_MARKER"
+        add_evidence(
+
+            entity=ent.text,
+
+            source="evidence_mapping",
+
+            observation="NER_FACILITY_OR_OBJECT",
+
+            hypothesis="OBJECT",
+
+            direction="SUPPORTS",
+
+            strength="STRONG",
+
+            token_index=ent.start,
+
+            span_start=ent.start,
+
+            span_end=ent.end
+
         )
-
-
-    if object_observations:
-
-        for observation in object_observations:
-
-            if observation == "NER_FACILITY_OR_OBJECT":
-
-                strength = "STRONG"
-
-
-            else:
-
-                strength = "WEAK"
-
-
-            add_evidence(
-                entity=name,
-                source="evidence_mapping",
-                observation=observation,
-                hypothesis="OBJECT",
-                direction="SUPPORTS",
-                strength=strength,
-                token_index=token.i
-            )
-
 
 # ------------------------------------------
 # DISPLAY
@@ -3338,198 +2894,309 @@ for evidence in evidence_records:
 
 
 # ==========================================
-# HYPOTHESIS CANDIDATE BUILDER
+# ==========================================
+# REASONING / RESOLUTION PIPELINE
 # ==========================================
 
-print("\n=== HYPOTHESIS CANDIDATE BUILDER ===\n")
+def run_reasoning_resolution():
+
+    # HYPOTHESIS CANDIDATE BUILDER
+    # ==========================================
+
+    print("\n=== HYPOTHESIS CANDIDATE BUILDER ===\n")
 
 
-hypothesis_candidates = {}
+    hypothesis_candidates = {}
 
 
-for evidence in evidence_records:
+    for evidence in evidence_records:
 
-    entity = evidence["entity"]
+        entity = evidence["entity"]
 
-    span_start = evidence["span_start"]
-    span_end = evidence["span_end"]
+        span_start = evidence["span_start"]
+        span_end = evidence["span_end"]
 
-    hypothesis = evidence["hypothesis"]
-
-
-    key = (
-        entity,
-        span_start,
-        span_end
-    )
+        hypothesis = evidence["hypothesis"]
 
 
-    if key not in hypothesis_candidates:
-
-        hypothesis_candidates[key] = {
-            "entity": entity,
-            "span_start": span_start,
-            "span_end": span_end,
-            "hypotheses": set()
-        }
-
-
-    hypothesis_candidates[key][
-        "hypotheses"
-    ].add(
-        hypothesis
-    )
-
-
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for key, group in hypothesis_candidates.items():
-
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
-
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
-
-    print("  CANDIDATES:")
-
-
-    for hypothesis in sorted(
-        group["hypotheses"]
-    ):
-
-        print(
-            f"    - "
-            f"{hypothesis}"
+        key = (
+            entity,
+            span_start,
+            span_end
         )
 
 
-    print()
+        if key not in hypothesis_candidates:
+
+            hypothesis_candidates[key] = {
+                "entity": entity,
+                "span_start": span_start,
+                "span_end": span_end,
+                "hypotheses": set()
+            }
 
 
-
-# ==========================================
-# EVIDENCE AGGREGATION
-# ==========================================
-
-print("\n=== EVIDENCE AGGREGATION ===\n")
-
-
-evidence_aggregation = {}
+        hypothesis_candidates[key][
+            "hypotheses"
+        ].add(
+            hypothesis
+        )
 
 
-for evidence in evidence_records:
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
 
-    entity = evidence["entity"]
-
-    span_start = evidence["span_start"]
-    span_end = evidence["span_end"]
-
-    key = (
-        entity,
-        span_start,
-        span_end
-    )
-
-
-    if key not in evidence_aggregation:
-
-        evidence_aggregation[key] = {
-            "entity": entity,
-            "span_start": span_start,
-            "span_end": span_end,
-            "evidence": []
-        }
-
-
-    evidence_aggregation[key]["evidence"].append(
-        evidence
-    )
-
-
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for key, group in evidence_aggregation.items():
-
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
-
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
-
-    print("  EVIDENCE:")
-
-
-    for evidence in group["evidence"]:
+    for key, group in hypothesis_candidates.items():
 
         print(
-            f"    SOURCE: "
-            f"{evidence['source']}"
+            f"ENTITY: "
+            f"{group['entity']}"
         )
 
         print(
-            f"    OBSERVATION: "
-            f"{evidence['observation']}"
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
         )
 
-        print(
-            f"    HYPOTHESIS: "
-            f"{evidence['hypothesis']}"
-        )
+        print("  CANDIDATES:")
 
-        print(
-            f"    DIRECTION: "
-            f"{evidence['direction']}"
-        )
 
-        print(
-            f"    STRENGTH: "
-            f"{evidence['strength']}"
-        )
+        for hypothesis in sorted(
+            group["hypotheses"]
+        ):
+
+            print(
+                f"    - "
+                f"{hypothesis}"
+            )
+
 
         print()
 
 
-# ==========================================
-# HYPOTHESIS AGGREGATION
-# ==========================================
 
-print("\n=== HYPOTHESIS AGGREGATION ===\n")
+    # ==========================================
+    # EVIDENCE AGGREGATION
+    # ==========================================
 
-
-hypothesis_aggregation = {}
+    print("\n=== EVIDENCE AGGREGATION ===\n")
 
 
-for key, group in evidence_aggregation.items():
-
-    entity = group["entity"]
-    span_start = group["span_start"]
-    span_end = group["span_end"]
-
-    group_key = (
-        entity,
-        span_start,
-        span_end
-    )
+    evidence_aggregation = {}
 
 
-    if group_key not in hypothesis_aggregation:
+    for evidence in evidence_records:
 
-        hypothesis_aggregation[group_key] = {
+        entity = evidence["entity"]
+
+        span_start = evidence["span_start"]
+        span_end = evidence["span_end"]
+
+        key = (
+            entity,
+            span_start,
+            span_end
+        )
+
+
+        if key not in evidence_aggregation:
+
+            evidence_aggregation[key] = {
+                "entity": entity,
+                "span_start": span_start,
+                "span_end": span_end,
+                "evidence": []
+            }
+
+
+        evidence_aggregation[key]["evidence"].append(
+            evidence
+        )
+
+
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
+
+    for key, group in evidence_aggregation.items():
+
+        print(
+            f"ENTITY: "
+            f"{group['entity']}"
+        )
+
+        print(
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
+        )
+
+        print("  EVIDENCE:")
+
+
+        for evidence in group["evidence"]:
+
+            print(
+                f"    SOURCE: "
+                f"{evidence['source']}"
+            )
+
+            print(
+                f"    OBSERVATION: "
+                f"{evidence['observation']}"
+            )
+
+            print(
+                f"    HYPOTHESIS: "
+                f"{evidence['hypothesis']}"
+            )
+
+            print(
+                f"    DIRECTION: "
+                f"{evidence['direction']}"
+            )
+
+            print(
+                f"    STRENGTH: "
+                f"{evidence['strength']}"
+            )
+
+            print()
+
+
+    # ==========================================
+    # HYPOTHESIS AGGREGATION
+    # ==========================================
+
+    print("\n=== HYPOTHESIS AGGREGATION ===\n")
+
+
+    hypothesis_aggregation = {}
+
+
+    for key, group in evidence_aggregation.items():
+
+        entity = group["entity"]
+        span_start = group["span_start"]
+        span_end = group["span_end"]
+
+        group_key = (
+            entity,
+            span_start,
+            span_end
+        )
+
+
+        if group_key not in hypothesis_aggregation:
+
+            hypothesis_aggregation[group_key] = {
+                "entity": entity,
+                "span_start": span_start,
+                "span_end": span_end,
+                "hypotheses": {}
+            }
+
+
+        hypotheses = (
+            hypothesis_aggregation[group_key]["hypotheses"]
+        )
+
+
+        for evidence in group["evidence"]:
+
+            hypothesis = evidence["hypothesis"]
+
+
+            if hypothesis not in hypotheses:
+
+                hypotheses[hypothesis] = []
+
+
+            hypotheses[hypothesis].append(
+                evidence
+            )
+
+
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
+
+    for key, group in hypothesis_aggregation.items():
+
+        print(
+            f"ENTITY: "
+            f"{group['entity']}"
+        )
+
+        print(
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
+        )
+
+        print("  HYPOTHESES:")
+
+
+        for hypothesis, evidence_list in (
+            group["hypotheses"].items()
+        ):
+
+            print(
+                f"    HYPOTHESIS: "
+                f"{hypothesis}"
+            )
+
+            for evidence in evidence_list:
+
+                print(
+                    f"      SOURCE: "
+                    f"{evidence['source']}"
+                )
+
+                print(
+                    f"      OBSERVATION: "
+                    f"{evidence['observation']}"
+                )
+
+                print(
+                    f"      DIRECTION: "
+                    f"{evidence['direction']}"
+                )
+
+                print(
+                    f"      STRENGTH: "
+                    f"{evidence['strength']}"
+                )
+
+            print()
+
+
+    # ==========================================
+    # HYPOTHESIS EVIDENCE SUMMARY
+    # ==========================================
+
+    print("\n=== HYPOTHESIS EVIDENCE SUMMARY ===\n")
+
+
+    hypothesis_evidence_summary = {}
+
+
+    for key, group in hypothesis_aggregation.items():
+
+        entity = group["entity"]
+        span_start = group["span_start"]
+        span_end = group["span_end"]
+
+        group_key = (
+            entity,
+            span_start,
+            span_end
+        )
+
+
+        hypothesis_evidence_summary[group_key] = {
             "entity": entity,
             "span_start": span_start,
             "span_end": span_end,
@@ -3537,804 +3204,664 @@ for key, group in evidence_aggregation.items():
         }
 
 
-    hypotheses = (
-        hypothesis_aggregation[group_key]["hypotheses"]
-    )
+        for hypothesis, evidence_list in (
+            group["hypotheses"].items()
+        ):
+
+            summary = {
+                "SUPPORTS": [],
+                "CONTRADICTS": [],
+                "NEUTRAL": [],
+                "UNKNOWN": []
+            }
 
 
-    for evidence in group["evidence"]:
+            for evidence in evidence_list:
 
-        hypothesis = evidence["hypothesis"]
+                direction = evidence["direction"]
 
-
-        if hypothesis not in hypotheses:
-
-            hypotheses[hypothesis] = []
-
-
-        hypotheses[hypothesis].append(
-            evidence
-        )
+                summary[direction].append(
+                    evidence
+                )
 
 
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for key, group in hypothesis_aggregation.items():
-
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
-
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
-
-    print("  HYPOTHESES:")
+            hypothesis_evidence_summary[group_key][
+                "hypotheses"
+            ][hypothesis] = summary
 
 
-    for hypothesis, evidence_list in (
-        group["hypotheses"].items()
-    ):
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
+
+    for key, group in hypothesis_evidence_summary.items():
 
         print(
-            f"    HYPOTHESIS: "
-            f"{hypothesis}"
+            f"ENTITY: "
+            f"{group['entity']}"
         )
 
-        for evidence in evidence_list:
+        print(
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
+        )
+
+        print("  HYPOTHESES:")
+
+
+        for hypothesis, summary in (
+            group["hypotheses"].items()
+        ):
 
             print(
-                f"      SOURCE: "
-                f"{evidence['source']}"
+                f"    HYPOTHESIS: "
+                f"{hypothesis}"
             )
 
-            print(
-                f"      OBSERVATION: "
-                f"{evidence['observation']}"
-            )
 
-            print(
-                f"      DIRECTION: "
-                f"{evidence['direction']}"
-            )
+            for direction in [
+                "SUPPORTS",
+                "CONTRADICTS",
+                "NEUTRAL",
+                "UNKNOWN"
+            ]:
 
-            print(
-                f"      STRENGTH: "
-                f"{evidence['strength']}"
-            )
-
-        print()
+                evidence_list = summary[direction]
 
 
-# ==========================================
-# HYPOTHESIS EVIDENCE SUMMARY
-# ==========================================
-
-print("\n=== HYPOTHESIS EVIDENCE SUMMARY ===\n")
-
-
-hypothesis_evidence_summary = {}
+                print(
+                    f"      {direction}: "
+                    f"{len(evidence_list)}"
+                )
 
 
-for key, group in hypothesis_aggregation.items():
-
-    entity = group["entity"]
-    span_start = group["span_start"]
-    span_end = group["span_end"]
-
-    group_key = (
-        entity,
-        span_start,
-        span_end
-    )
+            print()
 
 
-    hypothesis_evidence_summary[group_key] = {
-        "entity": entity,
-        "span_start": span_start,
-        "span_end": span_end,
-        "hypotheses": {}
-    }
+    # ==========================================
+    # HYPOTHESIS STATUS DETECTION
+    # ==========================================
+
+    print("\n=== HYPOTHESIS STATUS DETECTION ===\n")
 
 
-    for hypothesis, evidence_list in (
-        group["hypotheses"].items()
-    ):
+    hypothesis_status = {}
 
-        summary = {
-            "SUPPORTS": [],
-            "CONTRADICTS": [],
-            "NEUTRAL": [],
-            "UNKNOWN": []
+
+    for key, group in hypothesis_evidence_summary.items():
+
+        entity = group["entity"]
+        span_start = group["span_start"]
+        span_end = group["span_end"]
+
+        group_key = (
+            entity,
+            span_start,
+            span_end
+        )
+
+
+        hypothesis_status[group_key] = {
+            "entity": entity,
+            "span_start": span_start,
+            "span_end": span_end,
+            "hypotheses": {}
         }
 
 
-        for evidence in evidence_list:
+        for hypothesis, summary in (
+            group["hypotheses"].items()
+        ):
 
-            direction = evidence["direction"]
+            supports = len(
+                summary["SUPPORTS"]
+            )
 
-            summary[direction].append(
-                evidence
+            contradicts = len(
+                summary["CONTRADICTS"]
+            )
+
+            neutral = len(
+                summary["NEUTRAL"]
+            )
+
+            unknown = len(
+                summary["UNKNOWN"]
             )
 
 
-        hypothesis_evidence_summary[group_key][
-            "hypotheses"
-        ][hypothesis] = summary
+            if supports > 0 and contradicts > 0:
+
+                status = "MIXED"
+
+            elif supports > 0:
+
+                status = "SUPPORTED"
+
+            elif contradicts > 0:
+
+                status = "CONTRADICTED"
+
+            else:
+
+                status = "UNRESOLVED"
 
 
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
+            hypothesis_status[group_key][
+                "hypotheses"
+            ][hypothesis] = {
 
-for key, group in hypothesis_evidence_summary.items():
+                "status": status,
 
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
+                "supports": supports,
 
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
+                "contradicts": contradicts,
 
-    print("  HYPOTHESES:")
+                "neutral": neutral,
+
+                "unknown": unknown
+
+            }
 
 
-    for hypothesis, summary in (
-        group["hypotheses"].items()
-    ):
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
+
+    for key, group in hypothesis_status.items():
 
         print(
-            f"    HYPOTHESIS: "
-            f"{hypothesis}"
+            f"ENTITY: "
+            f"{group['entity']}"
+        )
+
+        print(
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
+        )
+
+        print("  HYPOTHESES:")
+
+
+        for hypothesis, data in (
+            group["hypotheses"].items()
+        ):
+
+            print(
+                f"    HYPOTHESIS: "
+                f"{hypothesis}"
+            )
+
+            print(
+                f"      STATUS: "
+                f"{data['status']}"
+            )
+
+            print(
+                f"      SUPPORTS: "
+                f"{data['supports']}"
+            )
+
+            print(
+                f"      CONTRADICTS: "
+                f"{data['contradicts']}"
+            )
+
+            print(
+                f"      NEUTRAL: "
+                f"{data['neutral']}"
+            )
+
+            print(
+                f"      UNKNOWN: "
+                f"{data['unknown']}"
+            )
+
+            print()
+
+
+    # ==========================================
+    # HYPOTHESIS COMPARISON
+    # ==========================================
+
+    print("\n=== HYPOTHESIS COMPARISON ===\n")
+
+
+    hypothesis_comparison = {}
+
+
+    for key, group in hypothesis_status.items():
+
+        entity = group["entity"]
+        span_start = group["span_start"]
+        span_end = group["span_end"]
+
+        group_key = (
+            entity,
+            span_start,
+            span_end
         )
 
 
-        for direction in [
-            "SUPPORTS",
-            "CONTRADICTS",
-            "NEUTRAL",
-            "UNKNOWN"
-        ]:
+        hypotheses = list(
+            group["hypotheses"].keys()
+        )
 
-            evidence_list = summary[direction]
 
+        hypothesis_comparison[group_key] = {
+
+            "entity": entity,
+
+            "span_start": span_start,
+
+            "span_end": span_end,
+
+            "hypotheses": hypotheses
+
+        }
+
+
+    # ------------------------------------------
+    # DISPLAY
+    # ------------------------------------------
+
+    for key, group in hypothesis_comparison.items():
+
+        print(
+            f"ENTITY: "
+            f"{group['entity']}"
+        )
+
+        print(
+            f"SPAN: "
+            f"{group['span_start']}:"
+            f"{group['span_end']}"
+        )
+
+        print("  COMPETING HYPOTHESES:")
+
+
+        for hypothesis in group["hypotheses"]:
 
             print(
-                f"      {direction}: "
-                f"{len(evidence_list)}"
+                f"    - "
+                f"{hypothesis}"
             )
 
 
-        print()
+        if len(group["hypotheses"]) > 1:
 
-
-# ==========================================
-# HYPOTHESIS STATUS DETECTION
-# ==========================================
-
-print("\n=== HYPOTHESIS STATUS DETECTION ===\n")
-
-
-hypothesis_status = {}
-
-
-for key, group in hypothesis_evidence_summary.items():
-
-    entity = group["entity"]
-    span_start = group["span_start"]
-    span_end = group["span_end"]
-
-    group_key = (
-        entity,
-        span_start,
-        span_end
-    )
-
-
-    hypothesis_status[group_key] = {
-        "entity": entity,
-        "span_start": span_start,
-        "span_end": span_end,
-        "hypotheses": {}
-    }
-
-
-    for hypothesis, summary in (
-        group["hypotheses"].items()
-    ):
-
-        supports = len(
-            summary["SUPPORTS"]
-        )
-
-        contradicts = len(
-            summary["CONTRADICTS"]
-        )
-
-        neutral = len(
-            summary["NEUTRAL"]
-        )
-
-        unknown = len(
-            summary["UNKNOWN"]
-        )
-
-
-        if supports > 0 and contradicts > 0:
-
-            status = "MIXED"
-
-        elif supports > 0:
-
-            status = "SUPPORTED"
-
-        elif contradicts > 0:
-
-            status = "CONTRADICTED"
+            print(
+                "  RELATION: COMPETING"
+            )
 
         else:
 
-            status = "UNRESOLVED"
+            print(
+                "  RELATION: SINGLE"
+            )
 
 
-        hypothesis_status[group_key][
-            "hypotheses"
-        ][hypothesis] = {
+        print()
 
-            "status": status,
 
-            "supports": supports,
+    # ==========================================
+    # RESOLUTION
+    # ==========================================
 
-            "contradicts": contradicts,
+    print("\n=== RESOLUTION ===\n")
 
-            "neutral": neutral,
 
-            "unknown": unknown
+    resolution = {}
+
+
+    for key, group in hypothesis_comparison.items():
+
+        entity = group["entity"]
+        span_start = group["span_start"]
+        span_end = group["span_end"]
+
+        hypotheses = group["hypotheses"]
+
+
+        status_group = hypothesis_status[key]
+
+
+        supported = []
+        conflicted = []
+
+
+        for hypothesis in hypotheses:
+
+            data = status_group["hypotheses"][
+                hypothesis
+            ]
+
+
+            if data["status"] == "SUPPORTED":
+
+                supported.append(
+                    hypothesis
+                )
+
+
+            if data["status"] == "MIXED":
+
+                conflicted.append(
+                    hypothesis
+                )
+
+
+        conflict = len(
+            conflicted
+        ) > 0
+
+
+        if len(supported) == 1:
+
+            final_status = "RESOLVED"
+            final_type = supported[0]
+
+        elif len(supported) > 1:
+
+            final_status = "AMBIGUOUS"
+            final_type = None
+
+        else:
+
+            final_status = "UNKNOWN"
+            final_type = None
+
+
+        resolution[key] = {
+
+            "entity": entity,
+
+            "span_start": span_start,
+
+            "span_end": span_end,
+
+            "status": final_status,
+
+            "type": final_type,
+
+            "conflict": conflict,
+
+            "candidates": list(hypotheses)
 
         }
 
+    # ==========================================
 
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for key, group in hypothesis_status.items():
-
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
-
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
-
-    print("  HYPOTHESES:")
-
-
-    for hypothesis, data in (
-        group["hypotheses"].items()
-    ):
-
-        print(
-            f"    HYPOTHESIS: "
-            f"{hypothesis}"
-        )
-
-        print(
-            f"      STATUS: "
-            f"{data['status']}"
-        )
-
-        print(
-            f"      SUPPORTS: "
-            f"{data['supports']}"
-        )
-
-        print(
-            f"      CONTRADICTS: "
-            f"{data['contradicts']}"
-        )
-
-        print(
-            f"      NEUTRAL: "
-            f"{data['neutral']}"
-        )
-
-        print(
-            f"      UNKNOWN: "
-            f"{data['unknown']}"
-        )
-
-        print()
-
-
-# ==========================================
-# HYPOTHESIS COMPARISON
-# ==========================================
-
-print("\n=== HYPOTHESIS COMPARISON ===\n")
-
-
-hypothesis_comparison = {}
-
-
-for key, group in hypothesis_status.items():
-
-    entity = group["entity"]
-    span_start = group["span_start"]
-    span_end = group["span_end"]
-
-    group_key = (
-        entity,
-        span_start,
-        span_end
-    )
-
-
-    hypotheses = list(
-        group["hypotheses"].keys()
-    )
-
-
-    hypothesis_comparison[group_key] = {
-
-        "entity": entity,
-
-        "span_start": span_start,
-
-        "span_end": span_end,
-
-        "hypotheses": hypotheses
-
+    return {
+        "hypothesis_candidates": hypothesis_candidates,
+        "evidence_aggregation": evidence_aggregation,
+        "hypothesis_aggregation": hypothesis_aggregation,
+        "hypothesis_evidence_summary": hypothesis_evidence_summary,
+        "hypothesis_status": hypothesis_status,
+        "hypothesis_comparison": hypothesis_comparison,
+        "resolution": resolution
     }
 
+reasoning_resolution = run_reasoning_resolution()
 
-# ------------------------------------------
-# DISPLAY
-# ------------------------------------------
-
-for key, group in hypothesis_comparison.items():
-
-    print(
-        f"ENTITY: "
-        f"{group['entity']}"
-    )
-
-    print(
-        f"SPAN: "
-        f"{group['span_start']}:"
-        f"{group['span_end']}"
-    )
-
-    print("  COMPETING HYPOTHESES:")
-
-
-    for hypothesis in group["hypotheses"]:
-
-        print(
-            f"    - "
-            f"{hypothesis}"
-        )
-
-
-    if len(group["hypotheses"]) > 1:
-
-        print(
-            "  RELATION: COMPETING"
-        )
-
-    else:
-
-        print(
-            "  RELATION: SINGLE"
-        )
-
-
-    print()
-
-
-# ==========================================
-# RESOLUTION
-# ==========================================
-
-print("\n=== RESOLUTION ===\n")
-
-
-resolution = {}
-
-
-for key, group in hypothesis_comparison.items():
-
-    entity = group["entity"]
-    span_start = group["span_start"]
-    span_end = group["span_end"]
-
-    hypotheses = group["hypotheses"]
-
-
-    status_group = hypothesis_status[key]
-
-
-    supported = []
-    conflicted = []
-
-
-    for hypothesis in hypotheses:
-
-        data = status_group["hypotheses"][
-            hypothesis
-        ]
-
-
-        if data["status"] == "SUPPORTED":
-
-            supported.append(
-                hypothesis
-            )
-
-
-        if data["status"] == "MIXED":
-
-            conflicted.append(
-                hypothesis
-            )
-
-
-    conflict = len(
-        conflicted
-    ) > 0
-
-
-    if len(supported) == 1:
-
-        final_status = "RESOLVED"
-        final_type = supported[0]
-
-    elif len(supported) > 1:
-
-        final_status = "AMBIGUOUS"
-        final_type = None
-
-    else:
-
-        final_status = "UNKNOWN"
-        final_type = None
-
-
-    resolution[key] = {
-
-        "entity": entity,
-
-        "span_start": span_start,
-
-        "span_end": span_end,
-
-        "status": final_status,
-
-        "type": final_type,
-
-        "conflict": conflict,
-
-        "candidates": list(hypotheses)
-
-    }
-
-# ==========================================
-# CHARACTER AGENCY DIAGNOSTIC TEST
-# ==========================================
-
-print("\n=== CHARACTER AGENCY DIAGNOSTIC ===\n")
-
-agency_test_entities = [
-    "Kaelan",
-    "Lira",
-    "Malakar",
-    "Queen Elara",
-    "Ruins",
-    "wind",
-    "trees"
+hypothesis_candidates = reasoning_resolution[
+    "hypothesis_candidates"
+]
+evidence_aggregation = reasoning_resolution[
+    "evidence_aggregation"
+]
+hypothesis_aggregation = reasoning_resolution[
+    "hypothesis_aggregation"
+]
+hypothesis_evidence_summary = reasoning_resolution[
+    "hypothesis_evidence_summary"
+]
+hypothesis_status = reasoning_resolution[
+    "hypothesis_status"
+]
+hypothesis_comparison = reasoning_resolution[
+    "hypothesis_comparison"
+]
+resolution = reasoning_resolution[
+    "resolution"
 ]
 
-for name in agency_test_entities:
 
-    if name not in entity_profiles:
-        print(f"ENTITY: {name}")
-        print("  NOT FOUND IN ENTITY PROFILES")
-        print()
-        continue
+# ==========================================
+# AI ESCALATION GATE
+# ==========================================
 
-    profile = entity_profiles[name]
+ai_escalation_candidates = []
 
-    print(f"ENTITY: {name}")
+ai_escalation_skipped = []
 
-    matching_sentences = []
+for key, result in resolution.items():
 
-    for sentence in doc.sents:
+    status = result.get("status")
+    conflict = result.get("conflict", False)
 
-        if any(
-            token.text == name
-            for token in sentence
-        ):
-            matching_sentences.append(
-                sentence.text.strip()
-            )
-
-    print(
-        "  SENTENCES:"
-    )
-
-    for sentence in matching_sentences:
-
-        print(
-            f"    - {sentence}"
-        )
-
-    print(
-        f"  MENTIONS: "
-        f"{profile['mentions']}"
-    )
-
-    print(
-        f"  PERSON_NER: "
-        f"{'PERSON' in profile['ner']}"
-    )
-
-    print(
-        f"  SUBJECT_ROLE: "
-        f"{'nsubj' in profile['dependencies'] or 'nsubjpass' in profile['dependencies']}"
-    )
-
-    print(
-        f"  ACTS: "
-        f"{len(profile['acts'])}"
-    )
-
-    print(
-        f"  ACTED_ON_BY: "
-        f"{len(profile['acted_on_by'])}"
-    )
-
-    print(
-        f"  DIALOGUE_PARTICIPANT: "
-        f"{name in dialogue_entities}"
-    )
-
-    context = semantic_context.get(
-        name,
+    hypothesis_group = hypothesis_status.get(
+        key,
         {}
     )
 
+    hypotheses_data = hypothesis_group.get(
+        "hypotheses",
+        {}
+    )
+
+    # ------------------------------------------
+    # CONFLICT
+    # ------------------------------------------
+
+    if conflict:
+
+        ai_escalation_candidates.append({
+            "key": key,
+            "entity": result.get("entity"),
+            "span_start": result.get("span_start"),
+            "span_end": result.get("span_end"),
+            "status": status,
+            "conflict": conflict,
+            "candidates": result.get(
+                "candidates",
+                []
+            ),
+            "reason": "CONFLICTING_EVIDENCE"
+        })
+
+        continue
+
+
+    # ------------------------------------------
+    # AMBIGUOUS
+    # ------------------------------------------
+
+    if status == "AMBIGUOUS":
+
+        ai_escalation_candidates.append({
+            "key": key,
+            "entity": result.get("entity"),
+            "span_start": result.get("span_start"),
+            "span_end": result.get("span_end"),
+            "status": status,
+            "conflict": conflict,
+            "candidates": result.get(
+                "candidates",
+                []
+            ),
+            "reason": "COMPETING_SUPPORTED_HYPOTHESES"
+        })
+
+        continue
+
+
+    # ------------------------------------------
+    # UNKNOWN
+    # ------------------------------------------
+
+    if status == "UNKNOWN":
+
+        has_directional_evidence = False
+        has_neutral_evidence = False
+        has_unknown_evidence = False
+
+        for data in hypotheses_data.values():
+
+            supports = data.get(
+                "supports",
+                0
+            )
+
+            contradicts = data.get(
+                "contradicts",
+                0
+            )
+
+            neutral = data.get(
+                "neutral",
+                0
+            )
+
+            unknown = data.get(
+                "unknown",
+                0
+            )
+
+            if supports > 0 or contradicts > 0:
+                has_directional_evidence = True
+
+            if neutral > 0:
+                has_neutral_evidence = True
+
+            if unknown > 0:
+                has_unknown_evidence = True
+
+
+        # --------------------------------------
+        # ONLY NEUTRAL EVIDENCE
+        # --------------------------------------
+
+        if (
+            not has_directional_evidence
+            and has_neutral_evidence
+            and not has_unknown_evidence
+        ):
+
+            ai_escalation_skipped.append({
+                "key": key,
+                "entity": result.get("entity"),
+                "span_start": result.get(
+                    "span_start"
+                ),
+                "span_end": result.get(
+                    "span_end"
+                ),
+                "status": status,
+                "conflict": conflict,
+                "candidates": result.get(
+                    "candidates",
+                    []
+                ),
+                "reason": "ONLY_NEUTRAL_EVIDENCE"
+            })
+
+            continue
+
+
+        # --------------------------------------
+        # OTHER UNKNOWN
+        # --------------------------------------
+
+        ai_escalation_candidates.append({
+            "key": key,
+            "entity": result.get("entity"),
+            "span_start": result.get(
+                "span_start"
+            ),
+            "span_end": result.get(
+                "span_end"
+            ),
+            "status": status,
+            "conflict": conflict,
+            "candidates": result.get(
+                "candidates",
+                []
+            ),
+            "reason": "ACTIONABLE_UNCERTAINTY"
+        })
+
+print("\n=== AI ESCALATION GATE ===\n")
+
+print(
+    "TOTAL RESOLUTION:",
+    len(resolution)
+)
+
+print(
+    "AI ESCALATION CANDIDATES:",
+    len(ai_escalation_candidates)
+)
+
+for candidate in ai_escalation_candidates:
+
     print(
-        f"  MODIFIERS: "
-        f"{sorted(context.get('modifiers', set()))}"
+        f"  ENTITY: {candidate['entity']}"
     )
 
     print(
-        f"  APPOSITIONS: "
-        f"{sorted(context.get('appositions', set()))}"
+        f"    STATUS: {candidate['status']}"
     )
 
     print(
-        f"  DESCRIPTIONS: "
-        f"{sorted(context.get('descriptions', set()))}"
+        f"    CONFLICT: {candidate['conflict']}"
     )
 
-    print("  TOKEN STRUCTURE:")
+    print(
+        f"    SPAN: "
+        f"{candidate['span_start']}:"
+        f"{candidate['span_end']}"
+    )
 
-    for sentence in matching_sentences:
-
-        for token in doc:
-
-            if (
-                token.text == name
-                and token.sent.text.strip() == sentence
-            ):
-
-                print(
-                    f"    {token.text} "
-                    f"POS={token.pos_} "
-                    f"DEP={token.dep_} "
-                    f"HEAD={token.head.text}"
-                )
-
-                for child in token.children:
-
-                    print(
-                        f"      CHILD: "
-                        f"{child.text} "
-                        f"POS={child.pos_} "
-                        f"DEP={child.dep_} "
-                        f"HEAD={child.head.text}"
-                    )
-
-                break
+    print(
+        f"    REASON: {candidate['reason']}"
+    )
 
     print()
 
+print(
+    "AI ESCALATION SKIPPED:",
+    len(ai_escalation_skipped)
+)
 
-# ==========================================
-# DEPENDENCY TREE TEST
-# ==========================================
-
-print("\n=== DEPENDENCY TREE TEST ===\n")
-
-test_words = {
-    "blacksmith",
-    "sorcerer",
-    "stronghold"
-}
-
-for token in doc:
-
-    if token.text.lower() not in test_words:
-        continue
+for skipped in ai_escalation_skipped:
 
     print(
-        f"TOKEN: {token.text}"
+        f"  ENTITY: {skipped['entity']}"
     )
 
     print(
-        f"  POS: {token.pos_}"
+        f"    STATUS: {skipped['status']}"
     )
 
     print(
-        f"  DEP: {token.dep_}"
+        f"    CONFLICT: {skipped['conflict']}"
     )
 
     print(
-        f"  HEAD: {token.head.text}"
+        f"    SPAN: "
+        f"{skipped['span_start']}:"
+        f"{skipped['span_end']}"
     )
 
     print(
-        f"  HEAD_POS: {token.head.pos_}"
+        f"    REASON: {skipped['reason']}"
     )
 
-    print(
-        f"  HEAD_DEP: {token.head.dep_}"
-    )
 
-    print(
-        "  CHILDREN:"
-    )
-
-    for child in token.children:
-
-        print(
-            f"    - {child.text} "
-            f"POS={child.pos_} "
-            f"DEP={child.dep_}"
-        )
-
-    print(
-        "  SENTENCE:"
-    )
-
-    print(
-        f"    {token.sent.text.strip()}"
-    )
-
-    print()
-
-    # ==========================================
-# NAMED RELATION TEST
-# ==========================================
-
-print("\n=== NAMED RELATION TEST ===\n")
-
-for token in doc:
-
-    if token.text.lower() != "named":
-        continue
-
-    print(
-        f"TOKEN: {token.text}"
-    )
-
-    print(
-        f"  POS: {token.pos_}"
-    )
-
-    print(
-        f"  DEP: {token.dep_}"
-    )
-
-    print(
-        f"  HEAD: {token.head.text}"
-    )
-
-    print(
-        f"  HEAD_POS: {token.head.pos_}"
-    )
-
-    print(
-        f"  HEAD_DEP: {token.head.dep_}"
-    )
-
-    print(
-        "  CHILDREN:"
-    )
-
-    for child in token.children:
-
-        print(
-            f"    - {child.text} "
-            f"POS={child.pos_} "
-            f"DEP={child.dep_}"
-        )
-
-    print(
-        "  SENTENCE:"
-    )
-
-    print(
-        f"    {token.sent.text.strip()}"
-    )
-
-    print()
-
-# ==========================================
-# NAMED DESCRIPTION TEST
-# ==========================================
-
-print("\n=== NAMED DESCRIPTION TEST ===\n")
-
-named_descriptions = []
-
-for token in doc:
-
-    if token.lemma_.lower() != "name":
-        continue
-
-    if token.dep_ != "acl":
-        continue
-
-    description = token.head
-
-    named_entity = None
-
-    for child in token.children:
-
-        if child.dep_ == "oprd":
-            named_entity = child
-            break
-
-    if named_entity is None:
-        continue
-
-    named_descriptions.append({
-        "description": description.text,
-        "name": named_entity.text,
-        "token_index": named_entity.i
-    })
-
-
-for item in named_descriptions:
-
-    print(
-        f"DESCRIPTION: {item['description']}"
-    )
-
-    print(
-        f"  NAMED ENTITY: {item['name']}"
-    )
-
-    print(
-        f"  TOKEN INDEX: {item['token_index']}"
-    )
-
-    print()
 
 
 # ------------------------------------------
